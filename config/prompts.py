@@ -31,14 +31,17 @@ TEXTO ORIGINAL:
 """
 
 IMAGE_PROMPT_GENERATION = """
-Com base no artigo fornecido, crie 1 (um) prompt detalhado para gerar uma imagem de capa impactante e profissional usando uma IA geradora de imagens (como Imagen 3 ou Midjourney).
+Com base no artigo fornecido, crie 3 (TRÊS) prompts detalhados para gerar imagens profissionais usando uma IA (Imagen 3/4).
 
-DIRETRIZES DO PROMPT DE IMAGEM:
-- O prompt deve ser em INGLÊS (para melhor compreensão da IA de imagem).
-- Descreva o estilo visual: "Photorealistic, cinematic lighting, 8k resolution, high quality".
-- Descreva o sujeito da imagem de forma clara e metafórica se necessário, evitando texto escrito na imagem.
-- NÃO descreva interfaces de usuário, prints ou gráficos complexos. Foque em fotografia ou ilustração editorial.
+1. Prompt 1: Imagem de Capa (Impactante, metafórica, ampla).
+2. Prompt 2: Imagem para o meio do artigo (Ilustrando um conceito chave).
+3. Prompt 3: Imagem para o final ou outro conceito (Contextual).
 
-SAÍDA:
-Retorne APENAS o texto do prompt, sem introduções ou explicações.
+DIRETRIZES:
+- Os prompts devem ser em INGLÊS.
+- Separe os 3 prompts EXATAMENTE com o delimitador "|||". 
+- Exemplo de saída: "Photo of a cat... ||| Illustration of a dog... ||| Concept art of a bird..."
+- NÃO numere, NÃO pule linhas entre eles, apenas use o delimitador "|||".
+
+ARTIGO:
 """

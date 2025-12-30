@@ -45,26 +45,35 @@ class GeminiBrain:
 
     def generate_image_prompts(self, article_text):
         """
-        Asks Gemini to describe 4 images for the article.
+        Asks Gemini to describe 3 images for the article.
+        Returns a LIST of strings.
         """
         model = genai.GenerativeModel('gemini-2.0-flash-exp')
-        prompt = IMAGE_PROMPT_GENERATION + "\n\nARTIGO:\n" + article_text[:2000] # Truncate for context if needed
+        prompt = IMAGE_PROMPT_GENERATION + article_text[:2000] # Truncate for context if needed
         
         response = model.generate_content(prompt)
-        # Parse logic would be needed here, or force JSON output.
-        # For now, let's assume it returns a list like string.
-        return response.text
+        text = response.text.strip()
+        
+        # Split by delimiter
+        prompts = [p.strip() for p in text.split('|||') if p.strip()]
+        
+        # Fallback if AI forgot delimiter (try newlines)
+        if len(prompts) < 2:
+            prompts = [p.strip() for p in text.split('\n') if p.strip()]
+            
+        return prompts[:3] # Guarantee max 3
 
     def generate_images(self, image_prompt):
         """
-        Uses standard REST API for Imagen 3 generation since SDK method is experimental.
+        Uses standard REST API for Imagen 3/4 generation since SDK method is experimental.
         """
         import requests
         
+        # Using Imagen 4.0 as verified available
         url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key={GOOGLE_API_KEY}"
         headers = {'Content-Type': 'application/json'}
         
-        # Imagen 3 API payload structure
+        # Imagen 3/4 API payload structure
         payload = {
             "instances": [
                 {
