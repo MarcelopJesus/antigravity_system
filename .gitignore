@@ -1,10 +1,6 @@
 __pycache__/
 *.pyc
 venv/
-.env
 .DS_Store
 .vscode/
 .idea/
-config/service_account.json
-config/sites.json
-fix_creds.py
