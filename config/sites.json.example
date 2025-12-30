@@ -1,0 +1,10 @@
+[
+  {
+    "site_name": "Example Site",
+    "spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE",
+    "wordpress_url": "https://your-wordpress-site.com",
+    "persona_prompt": "You are an expert in SEO...",
+    "wordpress_username": "YOUR_WP_USERNAME",
+    "wordpress_app_password": "YOUR_WP_APP_PASSWORD"
+  }
+]

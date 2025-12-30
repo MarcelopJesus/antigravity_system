@@ -5,3 +5,6 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+config/service_account.json
+config/sites.json
+fix_creds.py
