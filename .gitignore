@@ -12,6 +12,5 @@ config/sites.json
 *.log
 
 # Debug and Patch files
-debug_*.py
 main_patched*.py
 fix_creds.py
