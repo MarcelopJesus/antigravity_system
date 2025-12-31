@@ -46,6 +46,38 @@ class SheetsClient:
         worksheet = sh.get_worksheet(0)
         
         # Col B is 2, Col C is 3.
-        # batch update is better but single update is fine for low volume.
         worksheet.update_cell(row_num, 2, status)
         worksheet.update_cell(row_num, 3, link)
+
+    def get_all_completed_articles(self, spreadsheet_id):
+        """
+        Returns a list of articles that are already published (Status=Done and has Link).
+        Used for Internal Linking Strategy.
+        Format: [{'keyword': 'Foo', 'url': 'https://..'}, ...]
+        """
+        sh = self.gc.open_by_key(spreadsheet_id)
+        worksheet = sh.get_worksheet(0)
+        rows = worksheet.get_all_values()
+        
+        completed = []
+        for row in rows[1:]:
+            keyword = row[0] if len(row) > 0 else ""
+            status = row[1] if len(row) > 1 else ""
+            link = row[2] if len(row) > 2 else ""
+            
+            # Simple check: Status is Done and Link exists
+            if keyword and "Done" in status and "http" in link:
+                completed.append({
+                    'keyword': keyword,
+                    'url': link
+                })
+        return completed
+
+    def add_new_topic(self, spreadsheet_id, topic):
+        """
+        Appends a new topic to the end of the sheet.
+        """
+        sh = self.gc.open_by_key(spreadsheet_id)
+        worksheet = sh.get_worksheet(0)
+        worksheet.append_row([topic, "Pending", "", "Growth Idea"])
+

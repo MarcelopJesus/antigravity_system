@@ -31,19 +31,44 @@ class WordPressClient:
             return r.json().get('id'), r.json().get('source_url')
         return None, None
 
-    def create_post(self, title, content, featured_media_id=None, status='draft'):
+    def create_post(self, title, content, featured_media_id=None, status='publish', yoast_keyword=None, yoast_meta_desc=None):
         """
-        Creates a new post.
+        Creates a new post with Yoast SEO support.
         """
         url = f"{self.base_url}/wp-json/wp/v2/posts"
+        
         payload = {
             'title': title,
             'content': content,
-            'status': status
+            'status': status,
+            'meta': {}
         }
+        
+        # Yoast SEO Integration (JSON API fields might vary by version, using standard meta keys)
+        # Note: To write to these via REST API, the meta keys must be registered in WP or allowed.
+        # Common keys for Yoast:
+        if yoast_keyword:
+            payload['meta']['_yoast_wpseo_focuskw'] = yoast_keyword
+        
+        if yoast_meta_desc:
+            payload['meta']['_yoast_wpseo_metadesc'] = yoast_meta_desc
+            
+        # Clean up meta if empty
+        if not payload['meta']:
+            del payload['meta']
+
         if featured_media_id:
             payload['featured_media'] = featured_media_id
 
         r = requests.post(url, headers=self.headers, json=payload)
+        
+        # Error handling for meta keys not registered
+        if r.status_code == 400 and 'meta' in r.text:
+             print("     ⚠️ Warning: Could not update Yoast Meta. Keys might not be registered in REST API.")
+             # Retry without meta
+             if 'meta' in payload:
+                 del payload['meta']
+                 r = requests.post(url, headers=self.headers, json=payload)
+
         r.raise_for_status()
         return r.json()
