@@ -4,3 +4,14 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# Sensitive Data
+.env
+config/service_account.json
+config/sites.json
+*.log
+
+# Debug and Patch files
+debug_*.py
+main_patched*.py
+fix_creds.py

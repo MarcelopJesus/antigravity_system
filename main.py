@@ -34,6 +34,8 @@ def main():
             pending_keywords = sheets.get_pending_rows(site['spreadsheet_id'])
             print(f"Found {len(pending_keywords)} pending keywords.")
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"❌ Error accessing sheets for {site['site_name']}: {e}")
             continue
 
@@ -60,6 +62,7 @@ def main():
             print("     Refining with Persona...")
             final_content = brain.refine_with_persona(draft, site['persona_prompt'])
 
+            user_title = keyword.title()
             # 3. Images (Stubbed - Now Active)
             print("     Generating Images...")
             image_prompt = brain.generate_image_prompts(final_content)
@@ -70,22 +73,36 @@ def main():
             if images_b64:
                  try:
                      import base64
-                     # Take the first image
-                     image_data = base64.b64decode(images_b64[0])
-                     # Upload to WP
-                     print("     Uploading Image to WordPress...")
-                     # Create a slug from keyword for filename
+                     
+                     print(f"     Processing {len(images_b64)} images...")
+                     
+                     # Define slug for filenames
                      slug = keyword.replace(" ", "-").lower()[:50]
-                     media_id, media_url = wp.upload_media(image_data, f"{slug}-cover.png")
-                     if media_id:
-                         featured_media_id = media_id
-                         print(f"     ✅ Image Uploaded! ID: {media_id}")
+                     
+                     for i, b64_str in enumerate(images_b64):
+                         image_data = base64.b64decode(b64_str)
+                         
+                         suffix = "cover" if i == 0 else f"image-{i+1}"
+                         filename = f"{slug}-{suffix}.png"
+                         
+                         print(f"     Uploading Image {i+1}/{len(images_b64)} ({filename})...")
+                         media_id, media_url = wp.upload_media(image_data, filename)
+                         
+                         if media_id:
+                             if i == 0:
+                                 featured_media_id = media_id
+                                 print(f"     ✅ Set as Featured Image (ID: {media_id})")
+                             else:
+                                 # Append to content
+                                 # Add a little spacing
+                                 final_content += f"\n\n<!-- Image {i+1} -->\n<figure class='wp-block-image size-large'><img src='{media_url}' alt='{user_title} - Image {i+1}'/></figure>"
+                                 print(f"     ✅ Inserted into content (ID: {media_id})")
+                                 
                  except Exception as img_err:
                      print(f"     ❌ Image processing failed: {img_err}")
 
             # 4. Post to WP
             print("     Posting to WordPress...")
-            user_title = keyword.title()
             try:
                 post = wp.create_post(
                     title=user_title,
