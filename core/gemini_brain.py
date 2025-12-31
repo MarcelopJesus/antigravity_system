@@ -3,6 +3,8 @@ import os
 import requests
 import json
 import re
+import glob
+import markdown
 from config.settings import GOOGLE_API_KEYS_LIST
 from config.prompts import (
     CONTENT_ANALYST_PROMPT,
@@ -57,60 +59,99 @@ class GeminiBrain:
         
         raise Exception("All API keys failed.")
 
+    def _load_knowledge_base(self):
+        """
+        Reads files from 'knowledge_base', prioritizing the Premium summary 
+        to avoid Token Limits (80/20 Rule).
+        """
+        kb_content = ""
+        try:
+            # Assumes the folder is in the project root
+            files = glob.glob("knowledge_base/*.txt")
+            if not files:
+                return "Nenhuma base de conhecimento específica encontrada."
+            
+            for file_path in files:
+                filename = os.path.basename(file_path).lower()
+                
+                # FILTER: Only load the Premium file for now (80/20 Strategy)
+                if "premium" in filename:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        kb_content += f"\n--- ARQUIVO: {os.path.basename(file_path)} ---\n{content}\n"
+                        print(f"     [Brain] Loaded Base: {os.path.basename(file_path)}")
+                else:
+                    print(f"     [Brain] Skipping large file (80/20): {os.path.basename(file_path)}")
+            
+            return kb_content
+        except Exception as e:
+            print(f"     [Brain] Warning: Could not load knowledge base: {e}")
+            return ""
+
     # =========================================================================
     # 1. ANALISTA DE CONTEÚDO
     # =========================================================================
-    def analyze_and_plan(self, keyword, inventory_links):
+    def analyze_and_plan(self, keyword, links_inventory):
         """
-        Agent 1: Generates the specialized outline with internal linking strategy.
+        Agent 1: Creates the strategic outline (JSON).
+        Now with Knowledge Base injection!
         """
+        kb_text = self._load_knowledge_base()
+        
         def _task():
-            model = genai.GenerativeModel('gemini-2.0-flash-exp') 
+            model = genai.GenerativeModel('gemini-2.0-flash-exp')
             
-            # Format links for prompt
-            links_text = "\n".join([f"- {item['keyword']}: {item['url']}" for item in inventory_links])
-            
-            prompt = CONTENT_ANALYST_PROMPT.format(keyword=keyword, links_list=links_text)
-            
-            response = model.generate_content(
-                prompt,
-                generation_config={"response_mime_type": "application/json"}
+            # Format links from list of dicts to string
+            if isinstance(links_inventory, list):
+                links_text = "\n".join([f"- {item.get('keyword', 'Link')}: {item.get('url', '#')}" for item in links_inventory])
+            else:
+                links_text = str(links_inventory)
+
+            # Inject KB into prompt
+            prompt = CONTENT_ANALYST_PROMPT.format(
+                keyword=keyword, 
+                links_list=links_text,
+                knowledge_base=kb_text
             )
+            response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
             return response.text
 
-        json_str = self._execute_with_retry(_task)
+        raw_json = self._execute_with_retry(_task)
         try:
-            return json.loads(json_str)
-        except json.JSONDecodeError:
-            # Fallback if model returns markdown block
-            clean = json_str.replace("```json", "").replace("```", "")
-            return json.loads(clean)
+            return json.loads(raw_json)
+        except:
+            # Fallback cleanup if needed
+            cleaned = raw_json.replace("```json", "").replace("```", "")
+            return json.loads(cleaned)
 
     # =========================================================================
     # 2. REDATOR SÊNIOR
     # =========================================================================
     def write_article_body(self, outline_json):
         """
-        Agent 2: Writes the full article based on the plan.
+        Agent 2: Writes the full content based on the plan.
+        Now with Knowledge Base injection!
         """
+        kb_text = self._load_knowledge_base()
+
         def _task():
             model = genai.GenerativeModel('gemini-2.0-flash-exp')
-            
-            # Convert dict back to pretty json string for prompt
-            outline_str = json.dumps(outline_json, indent=2, ensure_ascii=False)
-            
-            prompt = SENIOR_WRITER_PROMPT.format(outline_json=outline_str)
+            prompt = SENIOR_WRITER_PROMPT.format(
+                outline_json=json.dumps(outline_json, indent=2, ensure_ascii=False),
+                knowledge_base=kb_text
+            )
             response = model.generate_content(prompt)
             return response.text
 
         return self._execute_with_retry(_task)
 
     # =========================================================================
-    # 3. EDITOR DE CONVERSÃO
+    # 3. EDITOR DE CONVERSÃO & SEO
     # =========================================================================
     def edit_and_refine(self, draft_html):
         """
-        Agent 3: Polishes the text, checks SEO local, and formats.
+        Agent 3: Polishes the content, check constraints and HTML structure.
+        Uses Python-based Markdown conversion as a fallback safety net.
         """
         def _task():
             model = genai.GenerativeModel('gemini-2.0-flash-exp')
@@ -130,6 +171,13 @@ class GeminiBrain:
         # Look for the first <h1>. Everything before it is likely garbage.
         if "<h1>" in clean_text:
             clean_text = clean_text[clean_text.find("<h1>"):]
+            
+        # SAFETY NET: If the text still looks like Markdown (has ## or **), force convert
+        # Check for common markdown headers or bolding that wasn't converted
+        if "##" in clean_text or "**" in clean_text:
+            print("     [Brain] Warning: Detected raw Markdown. Converting to HTML...")
+            html = markdown.markdown(clean_text)
+            return html.strip()
             
         return clean_text.strip()
 
