@@ -6,26 +6,33 @@ from core.sheets_client import SheetsClient
 from core.wordpress_client import WordPressClient
 
 def main():
-    print("🚀 SEO Orchestrator (New Architecture) Starting...")
+    print("🚀 SEO Orchestrator (Multi-Tenant Architecture) Starting...")
     
     # Check for service account
     if not os.path.exists('config/service_account.json'):
          print("❌ Error: 'config/service_account.json' missing.")
          return
 
-    # Initialize Brain
-    try:
-        brain = GeminiBrain()
-    except Exception as e:
-        print(f"❌ Error initializing Gemini: {e}")
-        return
-
-    # Load sites
+    # Load sites configuration
     with open('config/sites.json', 'r') as f:
         sites = json.load(f)
     
     for site in sites:
-        print(f"\nProcessing Site: {site.get('site_name', 'Unknown')}")
+        company_id = site.get('company_id', 'default')
+        site_name = site.get('site_name', 'Unknown')
+        
+        print(f"\n{'='*80}")
+        print(f"🏢 Processing Company: {site_name} (ID: {company_id})")
+        print(f"{'='*80}")
+        
+        # Initialize Brain with company-specific knowledge base
+        kb_path = f"config/companies/{company_id}/knowledge_base"
+        try:
+            brain = GeminiBrain(knowledge_base_path=kb_path)
+            print(f"✅ Brain initialized for '{company_id}' with KB path: {kb_path}")
+        except Exception as e:
+            print(f"❌ Error initializing Gemini for '{company_id}': {e}")
+            continue
         
         # Init Sheets
         try:

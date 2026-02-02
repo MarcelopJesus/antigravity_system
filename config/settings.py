@@ -5,3 +5,6 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 GOOGLE_API_KEYS_LIST = [k.strip() for k in os.getenv("GOOGLE_API_KEYS", "").split(",") if k.strip()]
+
+# Model Configuration
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-3-flash-preview")

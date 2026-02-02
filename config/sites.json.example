@@ -1,10 +1,20 @@
 [
   {
-    "site_name": "Example Site",
+    "site_name": "Empresa 1",
+    "company_id": "empresa1",
     "spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE",
     "wordpress_url": "https://your-wordpress-site.com",
-    "persona_prompt": "You are an expert in SEO...",
+    "persona_prompt": "Especialista em [SUA ÁREA]",
     "wordpress_username": "YOUR_WP_USERNAME",
     "wordpress_app_password": "YOUR_WP_APP_PASSWORD"
+  },
+  {
+    "site_name": "Empresa 2",
+    "company_id": "empresa2",
+    "spreadsheet_id": "ANOTHER_SPREADSHEET_ID",
+    "wordpress_url": "https://another-site.com",
+    "persona_prompt": "Especialista em [OUTRA ÁREA]",
+    "wordpress_username": "ANOTHER_WP_USERNAME",
+    "wordpress_app_password": "ANOTHER_WP_APP_PASSWORD"
   }
 ]

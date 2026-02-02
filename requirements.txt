@@ -1,5 +1,7 @@
 google-generativeai
 gspread
+gspread-formatting
 python-dotenv
 requests
 jinja2
+markdown

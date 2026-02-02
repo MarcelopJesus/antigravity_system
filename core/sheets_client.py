@@ -75,9 +75,11 @@ class SheetsClient:
 
     def add_new_topic(self, spreadsheet_id, topic):
         """
-        Appends a new topic to the end of the sheet.
+        Appends a new topic suggested by AI to the end of the sheet.
+        Uses '💡 Sugestão IA' as status to differentiate from client keywords.
         """
         sh = self.gc.open_by_key(spreadsheet_id)
         worksheet = sh.get_worksheet(0)
-        worksheet.append_row([topic, "Pending", "", "Growth Idea"])
+        worksheet.append_row([topic, "💡 Sugestão IA", ""])
+
 

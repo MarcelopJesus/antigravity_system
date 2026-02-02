@@ -1,9 +1,10 @@
 [
   {
     "site_name": "https://mjesus.com.br/",
+    "company_id": "mjesus",
     "spreadsheet_id": "1fzKSh0ct2kWzJy9prrHFWiZBBRP1mTwx9xM9mfuh6c4",
     "wordpress_url": "https://mjesus.com.br",
-    "persona_prompt": "You are an expert in SEO...",
+    "persona_prompt": "Especialista em Terapia de Reintegração Implícita (TRI)",
     "wordpress_username": "marcelo_seo",
     "wordpress_app_password": "NRb7 y9D7 jnNQ IELM HeZZ LXEf"
   }

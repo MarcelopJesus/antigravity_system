@@ -5,7 +5,7 @@ import json
 import re
 import glob
 import markdown
-from config.settings import GOOGLE_API_KEYS_LIST
+from config.settings import GOOGLE_API_KEYS_LIST, GEMINI_MODEL_NAME
 from config.prompts import (
     CONTENT_ANALYST_PROMPT,
     SENIOR_WRITER_PROMPT,
@@ -15,12 +15,13 @@ from config.prompts import (
 )
 
 class GeminiBrain:
-    def __init__(self):
+    def __init__(self, knowledge_base_path=None):
         if not GOOGLE_API_KEYS_LIST:
             raise ValueError("GOOGLE_API_KEYS_LIST is not set or empty in environment.")
         
         self.api_keys = GOOGLE_API_KEYS_LIST
         self.current_key_index = 0
+        self.knowledge_base_path = knowledge_base_path or "knowledge_base"  # Default fallback
         self._configure_current_key()
         
     def _configure_current_key(self):
@@ -61,15 +62,21 @@ class GeminiBrain:
 
     def _load_knowledge_base(self):
         """
-        Reads files from 'knowledge_base', prioritizing the Premium summary 
-        to avoid Token Limits (80/20 Rule).
+        Reads files from company-specific knowledge_base folder.
+        Returns empty string if no knowledge base exists (some companies may not have one).
         """
         kb_content = ""
         try:
-            # Assumes the folder is in the project root
-            files = glob.glob("knowledge_base/*.txt")
+            # Use company-specific path
+            kb_path = self.knowledge_base_path
+            if not os.path.exists(kb_path):
+                print(f"     [Brain] No knowledge base found at '{kb_path}'. Using AI's general knowledge.")
+                return ""
+            
+            files = glob.glob(f"{kb_path}/*.txt")
             if not files:
-                return "Nenhuma base de conhecimento específica encontrada."
+                print(f"     [Brain] No .txt files in '{kb_path}'. Using AI's general knowledge.")
+                return ""
             
             for file_path in files:
                 filename = os.path.basename(file_path).lower()
@@ -82,6 +89,9 @@ class GeminiBrain:
                         print(f"     [Brain] Loaded Base: {os.path.basename(file_path)}")
                 else:
                     print(f"     [Brain] Skipping large file (80/20): {os.path.basename(file_path)}")
+            
+            if not kb_content:
+                print(f"     [Brain] No premium knowledge base files found. Using AI's general knowledge.")
             
             return kb_content
         except Exception as e:
@@ -99,7 +109,7 @@ class GeminiBrain:
         kb_text = self._load_knowledge_base()
         
         def _task():
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel(GEMINI_MODEL_NAME)
             
             # Format links from list of dicts to string
             if isinstance(links_inventory, list):
@@ -135,7 +145,7 @@ class GeminiBrain:
         kb_text = self._load_knowledge_base()
 
         def _task():
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel(GEMINI_MODEL_NAME)
             prompt = SENIOR_WRITER_PROMPT.format(
                 outline_json=json.dumps(outline_json, indent=2, ensure_ascii=False),
                 knowledge_base=kb_text
@@ -154,7 +164,7 @@ class GeminiBrain:
         Uses Python-based Markdown conversion as a fallback safety net.
         """
         def _task():
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel(GEMINI_MODEL_NAME)
             prompt = CONVERSION_EDITOR_PROMPT.format(draft_html=draft_html)
             response = model.generate_content(prompt)
             return response.text
@@ -189,7 +199,7 @@ class GeminiBrain:
         Agent 4: Creates visual prompts based on the final text.
         """
         def _task():
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel(GEMINI_MODEL_NAME)
             # Send intro + headers to give context without token overflow
             # Increased context to 4000 to ensure context for middle/end images
             brief_context = final_article[:4000] 
@@ -256,7 +266,7 @@ class GeminiBrain:
         Agent 5: Scans the content for gaps and suggests new topics for the backlog.
         """
         def _task():
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel(GEMINI_MODEL_NAME)
             prompt = GROWTH_HACKER_PROMPT.format(title=title)
             response = model.generate_content(prompt)
             return response.text
