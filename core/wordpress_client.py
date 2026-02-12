@@ -24,7 +24,14 @@ class WordPressClient:
         url = f"{self.base_url}/wp-json/wp/v2/media"
         headers = self.headers.copy()
         headers["Content-Disposition"] = f"attachment; filename={filename}"
-        headers["Content-Type"] = "image/jpeg" # Assume JPEG for now
+        
+        # Detect Content-Type from extension
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'png'
+        content_types = {
+            'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+            'png': 'image/png', 'webp': 'image/webp', 'gif': 'image/gif'
+        }
+        headers["Content-Type"] = content_types.get(ext, "image/jpeg")
         
         r = requests.post(url, headers=headers, data=image_data)
         if r.status_code == 201:

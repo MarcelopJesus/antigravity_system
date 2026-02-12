@@ -80,50 +80,112 @@ def main():
                 draft_html = brain.write_article_body(outline_json)
 
                 # ---------------------------------------------------------
-                # STEP 3: EDITOR (Conversion & Polishing)
+                # STEP 3: HUMANIZADOR TRI (Voz do Marcelo Jesus)
                 # ---------------------------------------------------------
-                print("     3. Editor Agent: Polishing & SEO Local Check...")
-                final_content = brain.edit_and_refine(draft_html)
+                print("     3. Humanizer Agent: Injecting TRI Voice & Personality...")
+                humanized_html = brain.humanize_with_tri_voice(draft_html)
 
                 # ---------------------------------------------------------
-                # STEP 4: VISUAL (Images)
+                # STEP 4: EDITOR (Conversion & Polishing)
                 # ---------------------------------------------------------
-                print("     4. Visual Agent: Generating & Processing Images...")
+                print("     4. Editor Agent: Polishing & SEO Local Check...")
+                final_content = brain.edit_and_refine(humanized_html)
+
+                # ---------------------------------------------------------
+                # STEP 5: VISUAL (Images - Editorial Premium)
+                # ---------------------------------------------------------
+                print("     5. Visual Agent: Generating Editorial Images...")
                 prompts_str = brain.generate_image_prompts(final_content)
                 
-                # Split prompts safely
+                # Now returns 2 prompts (Capa + Final) separated by |||
                 prompts_list = [p.strip() for p in prompts_str.split('|||') if p.strip()]
                 
                 featured_media_id = None
+                slug = keyword.replace(" ", "-").lower()[:30]
                 
-                # We will process up to 3 images
-                for i, prompt in enumerate(prompts_list[:3]):
-                    print(f"        Generating Image {i+1}...")
-                    b64_image = brain.generate_final_images(prompt)
+                # ---- IMAGE 1: AI-Generated Cover (Featured Image) ----
+                if len(prompts_list) >= 1:
+                    print(f"        📷 Image 1 (Capa): Generating AI editorial image...")
+                    b64_image = brain.generate_final_images(prompts_list[0])
                     
                     if b64_image:
                         image_data = base64.b64decode(b64_image)
-                        slug = keyword.replace(" ", "-").lower()[:30]
-                        filename = f"{slug}-{i+1}.png"
+                        filename = f"{slug}-capa.png"
+                        media_id, media_url = wp.upload_media(image_data, filename)
+                        featured_media_id = media_id
+                        print(f"        ✅ Featured Image Set (ID: {media_id})")
+                
+                # ---- IMAGE 2: Real Author Photo (Rotation) ----
+                print(f"        📸 Image 2 (Autor): Loading real author photo...")
+                author_photo_data, author_photo_filename = brain.get_real_author_photo()
+                
+                if author_photo_data:
+                    # Determine file extension for proper upload
+                    ext = author_photo_filename.split('.')[-1].lower()
+                    upload_filename = f"{slug}-terapeuta.{ext}"
+                    media_id, media_url = wp.upload_media(author_photo_data, upload_filename)
+                    
+                    if media_url:
+                        # Insert author photo into first placeholder
+                        author_img_html = (
+                            f"<figure class='wp-block-image aligncenter size-large'>"
+                            f"<img src='{media_url}' alt='Marcelo Jesus - Terapeuta TRI em Moema, São Paulo'/>"
+                            f"<figcaption>Marcelo Jesus — Terapeuta especialista em TRI | Consultório em Moema, SP</figcaption>"
+                            f"</figure>"
+                        )
                         
+                        if "<!-- IMG_PLACEHOLDER -->" in final_content:
+                            final_content = final_content.replace(
+                                "<!-- IMG_PLACEHOLDER -->", 
+                                author_img_html, 
+                                1  # Replace only the FIRST placeholder
+                            )
+                            print(f"        ✅ Author photo injected into article body.")
+                        else:
+                            # No placeholder found - insert after first H2
+                            import re as re_mod
+                            h2_match = re_mod.search(r'(</h2>)', final_content)
+                            if h2_match:
+                                insert_pos = h2_match.end()
+                                final_content = final_content[:insert_pos] + "\n" + author_img_html + "\n" + final_content[insert_pos:]
+                                print(f"        ✅ Author photo inserted after first H2.")
+                            else:
+                                final_content += "\n" + author_img_html
+                                print(f"        ✅ Author photo appended to end.")
+                else:
+                    print(f"        ⚠️ No author photos found. Skipping Image 2.")
+                
+                # ---- IMAGE 3: AI-Generated Final (Hope/Transformation) ----
+                if len(prompts_list) >= 2:
+                    print(f"        📷 Image 3 (Final): Generating AI editorial image...")
+                    b64_image = brain.generate_final_images(prompts_list[1])
+                    
+                    if b64_image:
+                        image_data = base64.b64decode(b64_image)
+                        filename = f"{slug}-final.png"
                         media_id, media_url = wp.upload_media(image_data, filename)
                         
-                        if i == 0:
-                            featured_media_id = media_id
-                            print(f"        ✅ Featured Image Set (ID: {media_id})")
+                        # Insert into remaining placeholder or append before CTA
+                        final_img_html = f"<figure class='wp-block-image'><img src='{media_url}' alt='{final_title}'/></figure>"
+                        
+                        if "<!-- IMG_PLACEHOLDER -->" in final_content:
+                            final_content = final_content.replace(
+                                "<!-- IMG_PLACEHOLDER -->", 
+                                final_img_html, 
+                                1
+                            )
+                            print(f"        ✅ Final image injected into placeholder.")
                         else:
-                            # Try to replace placeholders or append
-                            if "<!-- IMG_PLACEHOLDER -->" in final_content:
+                            # Insert before CTA box if it exists
+                            if '<div class="cta-box">' in final_content:
                                 final_content = final_content.replace(
-                                    "<!-- IMG_PLACEHOLDER -->", 
-                                    f"<figure class='wp-block-image'><img src='{media_url}' alt='{final_title} - Imagem {i+1}'/></figure>", 
-                                    1
+                                    '<div class="cta-box">',
+                                    final_img_html + '\n<div class="cta-box">'
                                 )
-                                print(f"        ✅ Image injected into placeholder.")
+                                print(f"        ✅ Final image inserted before CTA.")
                             else:
-                                # Fallback append
-                                final_content += f"\n<figure class='wp-block-image'><img src='{media_url}' alt='{final_title}'/></figure>"
-                                print(f"        ✅ Image appended to end.")
+                                final_content += "\n" + final_img_html
+                                print(f"        ✅ Final image appended to end.")
 
                 # ---------------------------------------------------------
                 # POST TO WORDPRESS
@@ -153,9 +215,9 @@ def main():
                 sheets.update_row(site['spreadsheet_id'], row_num, link, status="Done")
 
                 # ---------------------------------------------------------
-                # STEP 5: GROWTH HACKER (New Topics)
+                # STEP 6: GROWTH HACKER (New Topics)
                 # ---------------------------------------------------------
-                print("     5. Growth Hacker Agent: Suggesting new topics...")
+                print("     6. Growth Hacker Agent: Suggesting new topics...")
                 new_topics = brain.identify_new_topics(final_title, final_content)
                 for topic in new_topics:
                     print(f"        💡 New Idea: {topic}")
