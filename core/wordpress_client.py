@@ -1,5 +1,9 @@
 import requests
 import base64
+from core.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class WordPressClient:
     def __init__(self, base_url, username, app_password):
@@ -11,31 +15,41 @@ class WordPressClient:
         }
 
     def verify_auth(self):
-        """Check if connection works"""
-        r = requests.get(f"{self.base_url}/wp-json/wp/v2/users/me", headers=self.headers)
-        return r.status_code == 200
+        """Check if connection works."""
+        try:
+            r = requests.get(f"{self.base_url}/wp-json/wp/v2/users/me", headers=self.headers)
+            if r.status_code == 200:
+                logger.info("WordPress auth verified for %s", self.base_url)
+                return True
+            logger.error("WordPress auth failed for %s (status=%d)", self.base_url, r.status_code)
+            return False
+        except requests.RequestException as e:
+            logger.error("WordPress connection failed for %s: %s", self.base_url, e)
+            return False
 
     def upload_media(self, image_data, filename):
         """
         Uploads an image to WordPress Media Library.
-        image_data: bytes
-        filename: str
         """
         url = f"{self.base_url}/wp-json/wp/v2/media"
         headers = self.headers.copy()
         headers["Content-Disposition"] = f"attachment; filename={filename}"
-        
-        # Detect Content-Type from extension
+
         ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'png'
         content_types = {
             'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
             'png': 'image/png', 'webp': 'image/webp', 'gif': 'image/gif'
         }
         headers["Content-Type"] = content_types.get(ext, "image/jpeg")
-        
+
         r = requests.post(url, headers=headers, data=image_data)
         if r.status_code == 201:
-            return r.json().get('id'), r.json().get('source_url')
+            media_id = r.json().get('id')
+            media_url = r.json().get('source_url')
+            logger.info("Media uploaded: %s (ID: %s)", filename, media_id)
+            return media_id, media_url
+
+        logger.error("Media upload failed for '%s' (status=%d): %s", filename, r.status_code, r.text[:200])
         return None, None
 
     def create_post(self, title, content, featured_media_id=None, status='publish', yoast_keyword=None, yoast_meta_desc=None):
@@ -43,24 +57,20 @@ class WordPressClient:
         Creates a new post with Yoast SEO support.
         """
         url = f"{self.base_url}/wp-json/wp/v2/posts"
-        
+
         payload = {
             'title': title,
             'content': content,
             'status': status,
             'meta': {}
         }
-        
-        # Yoast SEO Integration (JSON API fields might vary by version, using standard meta keys)
-        # Note: To write to these via REST API, the meta keys must be registered in WP or allowed.
-        # Common keys for Yoast:
+
         if yoast_keyword:
             payload['meta']['_yoast_wpseo_focuskw'] = yoast_keyword
-        
+
         if yoast_meta_desc:
             payload['meta']['_yoast_wpseo_metadesc'] = yoast_meta_desc
-            
-        # Clean up meta if empty
+
         if not payload['meta']:
             del payload['meta']
 
@@ -68,14 +78,15 @@ class WordPressClient:
             payload['featured_media'] = featured_media_id
 
         r = requests.post(url, headers=self.headers, json=payload)
-        
-        # Error handling for meta keys not registered
+
+        # Retry without meta if Yoast keys not registered
         if r.status_code == 400 and 'meta' in r.text:
-             print("     ⚠️ Warning: Could not update Yoast Meta. Keys might not be registered in REST API.")
-             # Retry without meta
-             if 'meta' in payload:
-                 del payload['meta']
-                 r = requests.post(url, headers=self.headers, json=payload)
+            logger.warning("Could not update Yoast Meta. Retrying without meta fields.")
+            if 'meta' in payload:
+                del payload['meta']
+                r = requests.post(url, headers=self.headers, json=payload)
 
         r.raise_for_status()
-        return r.json()
+        post_data = r.json()
+        logger.info("Post created: '%s' (ID: %s, status: %s)", title, post_data.get('id'), status)
+        return post_data
