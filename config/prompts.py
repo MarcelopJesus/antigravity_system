@@ -60,7 +60,8 @@ DIRETRIZES:
    - Estrutura lógica com 4 a 6 seções H2, cada uma com 1-2 H3
    - Comece informando o leitor sobre o tema
    - Desenvolva a perspectiva TRI no meio
-   - Finalize direcionando para ação
+   - OBRIGATÓRIO: Inclua uma seção "H2. Perguntas Frequentes" com 4-5 subtópicos H3 (perguntas comuns que o público pesquisa no Google sobre esse tema)
+   - Finalize com CTA/conclusão após o FAQ
    - Use linguagem acessível nos títulos das seções
 
 4. TIPO DE ARTIGO:
@@ -69,17 +70,32 @@ DIRETRIZES:
 
 5. LINKAGEM: Integre links internos de forma natural e relevante
 
+6. INTELIGÊNCIA DE KEYWORDS:
+   - Classifique a intenção de busca da keyword (informational, transactional ou navigational)
+   - Gere 3 variações naturais da keyword principal (sinônimos, reformulações)
+   - Gere 5 termos LSI (Latent Semantic Indexing) relacionados ao tema
+
+{{local_seo_section}}
+
 SAÍDA (JSON estrito):
 {{{{
   "title": "Título claro com keyword",
   "meta_description": "Descrição para Google (máx 155 chars)",
-  "is_pillar_page": boolean,
+  "search_intent": "informational|transactional|navigational",
+  "keyword_variations": ["variação 1", "variação 2", "variação 3"],
+  "lsi_keywords": ["termo LSI 1", "termo LSI 2", "termo LSI 3", "termo LSI 4", "termo LSI 5"],
+  "is_pillar_page": true,
   "internal_links_strategy": [
      {{{{"text": "texto âncora", "url": "url", "context": "onde inserir"}}}}
   ],
   "outline": [
      "H2. Título da seção",
-     "  H3. Subtópico"
+     "  H3. Subtópico",
+     "H2. Perguntas Frequentes",
+     "  H3. Pergunta relevante 1?",
+     "  H3. Pergunta relevante 2?",
+     "  H3. Pergunta relevante 3?",
+     "  H3. Pergunta relevante 4?"
   ]
 }}}}
 Retorne APENAS o JSON. Nenhuma explicação antes ou depois.
@@ -98,6 +114,10 @@ profissionais, empáticos e informativos para o blog de um terapeuta que utiliza
 
 OUTLINE DO ARTIGO (siga esta estrutura):
 {{outline_json}}
+
+PALAVRAS-CHAVE SEMÂNTICAS (use naturalmente no texto):
+- Variações da keyword: {{keyword_variations}}
+- Termos relacionados (LSI): {{lsi_keywords}}
 
 ═══════════════════════════════════════════════
 BASE DE CONHECIMENTO TRI (Material Oficial):
@@ -126,12 +146,20 @@ DIRETRIZES DE ESCRITA:
    - Evite listas genéricas de sintomas copiadas — traga perspectiva própria
    - Cada seção deve agregar valor real
 
+{{local_seo_section}}
+
 4. FORMATO HTML:
    - Tags: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>
    - Parágrafos curtos (2-4 frases)
    - NÃO inclua <!DOCTYPE>, <html>, <head>, <body> — apenas conteúdo.
 
-5. CTA FINAL (OBRIGATÓRIA — copie EXATAMENTE):
+5. FAQ (OBRIGATÓRIO):
+   - O outline inclui uma seção "Perguntas Frequentes" com H3 para cada pergunta
+   - Escreva cada H3 como a pergunta e o parágrafo seguinte como resposta direta (2-3 frases)
+   - As respostas devem ser claras, úteis e incluir termos da keyword quando natural
+   - Este FAQ será usado para gerar schema FAQPage (rich snippets no Google)
+
+6. CTA FINAL (OBRIGATÓRIA — copie EXATAMENTE):
 <div class="cta-box">
    <p>Quer entender melhor o que está por trás do que você sente? Agende uma avaliação.</p>
    <a href="https://wa.me/message/YT55SSBKHM4DC1" class="btn-whatsapp" target="_blank" rel="noopener">→ Falar com Marcelo Jesus no WhatsApp</a>
@@ -209,9 +237,11 @@ TAREFAS:
    - Remova duplicações de ideias entre parágrafos
    - Se o texto começar com algo que não é conteúdo, remova
 
-2. PLACEHOLDERS DE IMAGEM (posicione exatamente 2):
-   - <!-- IMG_PLACEHOLDER --> APÓS a introdução (antes do primeiro H2)
-   - <!-- IMG_PLACEHOLDER --> ANTES da CTA final
+2. PLACEHOLDERS DE IMAGEM (posicione exatamente 2, NUNCA juntos):
+   - PRIMEIRO <!-- IMG_PLACEHOLDER --> → APÓS a introdução, ANTES do primeiro H2
+   - SEGUNDO <!-- IMG_PLACEHOLDER --> → ANTES da CTA final (div class="cta-box")
+   - REGRA ABSOLUTA: Os dois placeholders devem estar SEPARADOS por pelo menos 2 seções H2
+   - NUNCA coloque os dois placeholders seguidos ou próximos
    - Coloque entre seções, nunca dentro de parágrafos
 
 3. LINGUAGEM TRI:
@@ -256,6 +286,10 @@ NUNCA INCLUA:
 PROMPT 1 — CAPA (Featured Image):
 Imagem de destaque. Metáfora visual ligada ao tema. Tom evocativo e cinematográfico.
 
+PROMPT 2 — CORPO (Após introdução):
+Imagem contextual ligada ao conteúdo do artigo. Pessoa em momento de reflexão,
+conexão emocional ou cenário terapêutico acolhedor. Deve complementar o texto ao redor.
+
 PROMPT 3 — FINAL (Antes da CTA):
 Imagem de encerramento. Mais abstrata, transmitindo leveza e esperança.
 
@@ -265,9 +299,9 @@ ARTIGO:
 SAÍDA (separada por |||):
 Escreva os prompts em INGLÊS, 80-150 palavras cada, ultra-descritivos.
 
-Prompt 1 ||| Prompt 3
+Prompt 1 ||| Prompt 2 ||| Prompt 3
 
-Apenas os 2 prompts separados por |||. Sem numeração, títulos ou explicações.
+Apenas os 3 prompts separados por |||. Sem numeração, títulos ou explicações.
 """
 
 

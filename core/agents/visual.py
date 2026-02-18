@@ -132,7 +132,8 @@ class VisualAgent(BaseAgent):
             logger.error("Error reading photo '%s': %s", selected_photo, e)
             return None, None
 
-    def process_images(self, final_content, final_title, keyword, wp_client, knowledge_base_path):
+    def process_images(self, final_content, final_title, keyword, wp_client, knowledge_base_path,
+                        site_config=None, outline=None):
         """Full image processing pipeline: generate prompts, create images, inject into HTML.
 
         Args:
@@ -141,6 +142,8 @@ class VisualAgent(BaseAgent):
             keyword: The target keyword (for filenames).
             wp_client: WordPressClient instance for uploading.
             knowledge_base_path: Path to KB for author photos.
+            site_config: Site configuration dict (for author_name, etc).
+            outline: Outline dict from analyst (for section titles).
 
         Returns:
             (updated_content, featured_media_id, images_failed_count)
@@ -166,9 +169,11 @@ class VisualAgent(BaseAgent):
                 if b64_image:
                     image_data = base64.b64decode(b64_image)
                     filename = f"{slug}-capa.png"
-                    media_id, media_url = wp_client.upload_media(image_data, filename)
+                    title_short = final_title[:60].rsplit(' ', 1)[0] if len(final_title) > 60 else final_title
+                    cover_alt = f"{keyword} - {title_short}"
+                    media_id, media_url = wp_client.upload_media(image_data, filename, alt_text=cover_alt)
                     featured_media_id = media_id
-                    logger.info("     Featured Image Set (ID: %s)", media_id)
+                    logger.info("     Featured Image Set (ID: %s, alt: '%s')", media_id, cover_alt[:50])
                 else:
                     logger.warning("     Cover image generation returned empty. Publishing without featured image.")
                     images_failed += 1
@@ -176,54 +181,66 @@ class VisualAgent(BaseAgent):
                 logger.warning("     Cover image failed: %s. Publishing without featured image.", img_err)
                 images_failed += 1
 
-        # IMAGE 2: Real Author Photo
-        logger.info("     Image 2 (Author): Loading real author photo...")
-        try:
-            author_photo_data, author_photo_filename = self.get_real_author_photo(knowledge_base_path)
-
-            if author_photo_data:
-                ext = author_photo_filename.split('.')[-1].lower()
-                upload_filename = f"{slug}-terapeuta.{ext}"
-                media_id, media_url = wp_client.upload_media(author_photo_data, upload_filename)
-
-                if media_url:
-                    author_img_html = (
-                        f"<figure class='wp-block-image aligncenter size-large'>"
-                        f"<img src='{media_url}' alt='Marcelo Jesus - Terapeuta TRI em Moema, São Paulo'/>"
-                        f"<figcaption>Marcelo Jesus — Terapeuta especialista em TRI | Consultório em Moema, SP</figcaption>"
-                        f"</figure>"
-                    )
-
-                    if "<!-- IMG_PLACEHOLDER -->" in final_content:
-                        final_content = final_content.replace("<!-- IMG_PLACEHOLDER -->", author_img_html, 1)
-                        logger.info("     Author photo injected into placeholder.")
-                    else:
-                        h2_match = re.search(r'(</h2>)', final_content)
-                        if h2_match:
-                            insert_pos = h2_match.end()
-                            final_content = final_content[:insert_pos] + "\n" + author_img_html + "\n" + final_content[insert_pos:]
-                            logger.info("     Author photo inserted after first H2.")
-                        else:
-                            final_content += "\n" + author_img_html
-                            logger.info("     Author photo appended to end.")
-            else:
-                logger.warning("     No author photos found. Skipping Image 2.")
-                images_failed += 1
-        except Exception as img_err:
-            logger.warning("     Author photo failed: %s. Continuing without it.", img_err)
-            images_failed += 1
-
-        # IMAGE 3: AI-Generated Final
+        # IMAGE 2: AI-Generated Body Image
         if len(prompts_list) >= 2:
-            logger.info("     Image 3 (Final): Generating AI editorial image...")
+            logger.info("     Image 2 (Body): Generating AI editorial image...")
             try:
                 b64_image = self.generate_image(prompts_list[1])
                 if b64_image:
                     image_data = base64.b64decode(b64_image)
-                    filename = f"{slug}-final.png"
-                    media_id, media_url = wp_client.upload_media(image_data, filename)
+                    filename = f"{slug}-corpo.png"
+                    # Use first H2 section title for alt text context
+                    first_section = ""
+                    if outline and isinstance(outline, dict):
+                        sections = outline.get('outline', [])
+                        for s in sections:
+                            if isinstance(s, str) and s.strip().startswith('H2'):
+                                first_section = re.sub(r'^H2\.\s*', '', s.strip())
+                                break
+                    body_alt = f"{keyword} - {first_section}" if first_section else f"{keyword} - {final_title}"
+                    media_id, media_url = wp_client.upload_media(image_data, filename, alt_text=body_alt)
 
-                    final_img_html = f"<figure class='wp-block-image'><img src='{media_url}' alt='{final_title}'/></figure>"
+                    body_img_html = f"<figure class='wp-block-image'><img src='{media_url}' alt='{body_alt}'/></figure>"
+
+                    if "<!-- IMG_PLACEHOLDER -->" in final_content:
+                        final_content = final_content.replace("<!-- IMG_PLACEHOLDER -->", body_img_html, 1)
+                        logger.info("     Body image injected into placeholder.")
+                    else:
+                        h2_match = re.search(r'(</h2>)', final_content)
+                        if h2_match:
+                            insert_pos = h2_match.end()
+                            final_content = final_content[:insert_pos] + "\n" + body_img_html + "\n" + final_content[insert_pos:]
+                            logger.info("     Body image inserted after first H2.")
+                        else:
+                            final_content += "\n" + body_img_html
+                            logger.info("     Body image appended to end.")
+                else:
+                    logger.warning("     Body image generation returned empty. Continuing without it.")
+                    images_failed += 1
+            except Exception as img_err:
+                logger.warning("     Body image failed: %s. Continuing without it.", img_err)
+                images_failed += 1
+
+        # IMAGE 3: AI-Generated Final
+        if len(prompts_list) >= 3:
+            logger.info("     Image 3 (Final): Generating AI editorial image...")
+            try:
+                b64_image = self.generate_image(prompts_list[2])
+                if b64_image:
+                    image_data = base64.b64decode(b64_image)
+                    filename = f"{slug}-final.png"
+                    # Use last outline section title for context, fallback to article title
+                    last_section = ""
+                    if outline and isinstance(outline, dict):
+                        sections = outline.get('outline', [])
+                        for s in reversed(sections):
+                            if isinstance(s, str) and s.strip().startswith('H2'):
+                                last_section = re.sub(r'^H2\.\s*', '', s.strip())
+                                break
+                    final_alt = f"{keyword} - {last_section}" if last_section else f"{keyword} - {final_title}"
+                    media_id, media_url = wp_client.upload_media(image_data, filename, alt_text=final_alt)
+
+                    final_img_html = f"<figure class='wp-block-image'><img src='{media_url}' alt='{final_alt}'/></figure>"
 
                     if "<!-- IMG_PLACEHOLDER -->" in final_content:
                         final_content = final_content.replace("<!-- IMG_PLACEHOLDER -->", final_img_html, 1)

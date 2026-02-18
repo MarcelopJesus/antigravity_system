@@ -191,13 +191,23 @@ class TestArticlePipelineE2E:
         assert len(result.agent_metrics) == 2
 
     def test_metrics_collected(self):
-        analyst_json = json.dumps({"title": "T", "sections": [], "meta_description": ""})
-        long_content = "<h1>T</h1><p>" + "word " * 50 + "</p>"
+        meta = "This is a meta description that is exactly long enough to pass the SEO scorer check for proper length validation here."
+        analyst_json = json.dumps({"title": "Test keyword guide", "sections": [], "meta_description": meta})
+        # Build content that passes SEO gate (keyword in title, first paragraph, enough words, CTA, images)
+        words = " ".join(["test keyword"] * 5 + ["word"] * 200)
+        long_content = (
+            f'<h1>Test keyword guide</h1><p>test keyword {words}</p>'
+            f'<h2>Section</h2><p>{words}</p>'
+            f'<a href="https://example.com/1">link1</a>'
+            f'<a href="https://example.com/2">link2</a>'
+            f'<!-- IMG_PLACEHOLDER -->'
+            f'<div class="cta-box"><p>CTA</p></div>'
+        )
 
         pipeline = self._setup_pipeline_with_responses(
             analyst_json, long_content, long_content, long_content
         )
-        result = pipeline.run("test", [])
+        result = pipeline.run("test keyword", [])
 
         assert result.success is True
         for metric in result.agent_metrics:

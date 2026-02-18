@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import re
@@ -10,6 +11,7 @@ from core.agents.growth import GrowthAgent
 from core.sheets_client import SheetsClient
 from core.wordpress_client import WordPressClient
 from core.logger import setup_logger, get_logger
+from core.dry_run import load_keywords_from_file, save_dry_run_output
 from config.settings import load_wp_credentials
 
 # Initialize logging before anything else
@@ -21,13 +23,45 @@ logger = get_logger("main")
 from core.pipeline import validate_analyst_output, validate_html_output
 
 
-def main():
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="SEO Orchestrator — Multi-Tenant Article Pipeline"
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        default=False,
+        help='Run pipeline but save output locally instead of publishing to WordPress/Sheets'
+    )
+    parser.add_argument(
+        '--keywords',
+        type=str,
+        default=None,
+        help='Path to a JSON file with keywords (used with --dry-run to skip Sheets read)'
+    )
+    parser.add_argument(
+        '--reoptimize',
+        action='store_true',
+        default=False,
+        help='Re-optimize existing WordPress articles (fix alt text, inject schema, update metadata)'
+    )
+    return parser.parse_args(argv)
+
+
+def main(dry_run=False, keywords_file=None):
     logger.info("=" * 80)
-    logger.info("SEO Orchestrator (Multi-Tenant) Starting...")
+    if dry_run:
+        logger.info("SEO Orchestrator (Multi-Tenant) Starting in DRY-RUN mode...")
+    else:
+        logger.info("SEO Orchestrator (Multi-Tenant) Starting...")
     logger.info("=" * 80)
 
-    if not os.path.exists('config/service_account.json'):
+    if not dry_run and not os.path.exists('config/service_account.json'):
         logger.error("'config/service_account.json' missing. Aborting.")
+        return 1
+
+    if dry_run and keywords_file and not os.path.exists(keywords_file):
+        logger.error("Keywords file '%s' not found. Aborting.", keywords_file)
         return 1
 
     try:
@@ -60,34 +94,51 @@ def main():
             llm = LLMClient()
             kb = KnowledgeBase(kb_path)
             pipeline = ArticlePipeline(llm, kb)
-            visual = VisualAgent(llm, kb)
+            if not dry_run:
+                visual = VisualAgent(llm, kb)
             growth = GrowthAgent(llm, kb)
             logger.info("Pipeline initialized for '%s' with KB path: %s", company_id, kb_path)
         except Exception as e:
             logger.error("Error initializing pipeline for '%s': %s", company_id, e)
             continue
 
-        try:
-            sheets = SheetsClient('config/service_account.json')
-            pending_keywords = sheets.get_pending_rows(site['spreadsheet_id'])
-            logger.info("Fetching Article Inventory for Link Building...")
-            inventory = sheets.get_all_completed_articles(site['spreadsheet_id'])
-            logger.info("Found %d existing articles for potential linking.", len(inventory))
-            logger.info("Found %d pending keywords to write.", len(pending_keywords))
-        except Exception as e:
-            logger.error("Error accessing sheets for '%s': %s", company_id, e)
-            continue
+        # --- Keywords source ---
+        if dry_run and keywords_file:
+            try:
+                pending_keywords = load_keywords_from_file(keywords_file)
+                inventory = []
+                logger.info("[DRY-RUN] Loaded %d keywords from %s", len(pending_keywords), keywords_file)
+            except Exception as e:
+                logger.error("Error loading keywords file '%s': %s", keywords_file, e)
+                continue
+        else:
+            if not dry_run and not os.path.exists('config/service_account.json'):
+                logger.error("'config/service_account.json' missing. Skipping '%s'.", company_id)
+                continue
+            try:
+                sheets = SheetsClient('config/service_account.json')
+                pending_keywords = sheets.get_pending_rows(site['spreadsheet_id'])
+                logger.info("Fetching Article Inventory for Link Building...")
+                inventory = sheets.get_all_completed_articles(site['spreadsheet_id'])
+                logger.info("Found %d existing articles for potential linking.", len(inventory))
+                logger.info("Found %d pending keywords to write.", len(pending_keywords))
+            except Exception as e:
+                logger.error("Error accessing sheets for '%s': %s", company_id, e)
+                continue
 
-        try:
-            wp_username, wp_password = load_wp_credentials(site)
-        except ValueError as e:
-            logger.error("Credentials error for '%s': %s", company_id, e)
-            continue
+        # --- WordPress setup (skip in dry-run) ---
+        wp = None
+        if not dry_run:
+            try:
+                wp_username, wp_password = load_wp_credentials(site)
+            except ValueError as e:
+                logger.error("Credentials error for '%s': %s", company_id, e)
+                continue
 
-        wp = WordPressClient(site['wordpress_url'], wp_username, wp_password)
-        if not wp.verify_auth():
-            logger.error("Cannot authenticate with WordPress for '%s'. Skipping.", company_id)
-            continue
+            wp = WordPressClient(site['wordpress_url'], wp_username, wp_password)
+            if not wp.verify_auth():
+                logger.error("Cannot authenticate with WordPress for '%s'. Skipping.", company_id)
+                continue
 
         seen_keywords = set()
 
@@ -103,73 +154,105 @@ def main():
             if not is_valid:
                 logger.warning("Skipping invalid keyword (row %d): %s", row_num, validation_error)
                 company_errors += 1
-                try:
-                    sheets.update_row(site['spreadsheet_id'], row_num, "", status=f"Error: {validation_error[:50]}")
-                except Exception:
-                    pass
+                if not dry_run:
+                    try:
+                        sheets.update_row(site['spreadsheet_id'], row_num, "", status=f"Error: {validation_error[:50]}")
+                    except Exception:
+                        pass
                 continue
             seen_keywords.add(keyword.strip().lower())
 
             try:
                 # Run the 4-agent article pipeline
-                result = pipeline.run(keyword, inventory)
+                result = pipeline.run(keyword, inventory, site_config=site)
 
                 if not result.success:
+                    if result.seo_grade == "D":
+                        logger.error("  SEO Gate blocked publication (grade D, score %d)", result.seo_score)
                     raise ValueError(result.error)
 
                 final_title = result.title
                 final_content = result.content
-                outline_json = result.outline
 
-                # STEP 5: VISUAL (Images)
-                final_content, featured_media_id, img_failures = visual.process_images(
-                    final_content, final_title, keyword, wp, kb_path
-                )
-                company_images_failed += img_failures
+                if dry_run:
+                    # DRY-RUN: skip images, save locally
+                    final_content = clean_orphan_placeholders(final_content)
+                    result.content = final_content
+                    html_path, json_path = save_dry_run_output(company_id, keyword, result)
+                    logger.info("  [DRY-RUN] Article saved to %s", html_path)
+                    company_success += 1
 
-                # Clean orphan placeholders
-                final_content = clean_orphan_placeholders(final_content)
+                    # Log priority keywords for missing internal links
+                    if result.missing_link_keywords:
+                        for priority_kw in result.missing_link_keywords:
+                            logger.info("  [DRY-RUN] 🔗 PRIORITY keyword for planilha: '%s'", priority_kw)
+                else:
+                    # PRODUCTION: images + WordPress + Sheets
+                    # STEP 5: VISUAL (Images)
+                    final_content, featured_media_id, img_failures = visual.process_images(
+                        final_content, final_title, keyword, wp, kb_path,
+                        site_config=site, outline=result.outline
+                    )
+                    company_images_failed += img_failures
 
-                # POST TO WORDPRESS
-                logger.info("  Publishing to WordPress...")
-                meta_desc = result.meta_description
-                if not meta_desc:
-                    clean = re.sub('<[^<]+?>', '', final_content)
-                    meta_desc = clean[:155] + "..."
+                    # Clean orphan placeholders
+                    final_content = clean_orphan_placeholders(final_content)
 
-                post = wp.create_post(
-                    title=final_title,
-                    content=final_content,
-                    featured_media_id=featured_media_id,
-                    status='publish',
-                    yoast_keyword=keyword,
-                    yoast_meta_desc=meta_desc
-                )
-                link = post.get('link')
-                logger.info("  POSTED SUCCESSFULLY! Link: %s", link)
+                    # POST TO WORDPRESS
+                    logger.info("  Publishing to WordPress...")
+                    meta_desc = result.meta_description
+                    if not meta_desc:
+                        clean = re.sub('<[^<]+?>', '', final_content)
+                        meta_desc = clean[:155] + "..."
 
-                sheets.update_row(site['spreadsheet_id'], row_num, link, status="Done")
-                company_success += 1
+                    post = wp.create_post(
+                        title=final_title,
+                        content=final_content,
+                        featured_media_id=featured_media_id,
+                        status='publish',
+                        yoast_keyword=keyword,
+                        yoast_meta_desc=meta_desc,
+                        slug=result.slug,
+                        excerpt=result.excerpt,
+                        og_title=final_title,
+                        og_description=meta_desc,
+                    )
+                    link = post.get('link')
+                    logger.info("  POSTED SUCCESSFULLY! Link: %s", link)
 
-                # STEP 6: GROWTH HACKER
+                    sheets.update_row(site['spreadsheet_id'], row_num, link, status="Done")
+                    company_success += 1
+
+                    # Add priority keywords for missing internal links
+                    if result.missing_link_keywords:
+                        for priority_kw in result.missing_link_keywords:
+                            sheets.add_priority_keyword(
+                                site['spreadsheet_id'], priority_kw, source_article=final_title
+                            )
+
+                # GROWTH HACKER (both modes — but skip Sheets write in dry-run)
                 logger.info("  6. Growth Hacker Agent: Suggesting new topics...")
                 try:
                     growth_result = growth.execute({"title": final_title})
                     if growth_result.success:
                         for topic in growth_result.content:
                             logger.info("     New Idea: %s", topic)
-                            sheets.add_new_topic(site['spreadsheet_id'], topic)
+                            if not dry_run:
+                                sheets.add_new_topic(site['spreadsheet_id'], topic)
+                            else:
+                                logger.info("     [DRY-RUN] Would add topic to sheet: %s", topic)
                 except Exception as gh_err:
                     logger.warning("  Growth Hacker failed (non-critical): %s", gh_err)
 
             except Exception as e:
                 company_errors += 1
                 logger.error("FAILED keyword '%s' (row %d): %s", keyword, row_num, e, exc_info=True)
-                try:
-                    error_msg = str(e)[:80]
-                    sheets.update_row(site['spreadsheet_id'], row_num, "", status=f"Error: {error_msg}")
-                except Exception as sheet_err:
-                    logger.error("Could not update sheet with error status: %s", sheet_err)
+                if not dry_run:
+                    try:
+                        error_msg = str(e)[:80]
+                        sheets.update_row(site['spreadsheet_id'], row_num, "", status=f"Error: {error_msg}")
+                    except Exception as sheet_err:
+                        logger.error("Could not update sheet with error status: %s", sheet_err)
 
         logger.info("=" * 60)
         logger.info("COMPANY SUMMARY: %s", site_name)
@@ -193,6 +276,54 @@ def main():
     return 1 if total_errors > 0 else 0
 
 
+def reoptimize():
+    """Re-optimize all existing WordPress articles."""
+    from core.reoptimizer import ArticleReoptimizer
+
+    logger.info("=" * 80)
+    logger.info("SEO Re-Optimizer Starting...")
+    logger.info("=" * 80)
+
+    try:
+        with open('config/sites.json', 'r') as f:
+            sites = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.error("Failed to load sites.json: %s", e)
+        return 1
+
+    for site in sites:
+        company_id = site.get('company_id', 'default')
+        site_name = site.get('site_name', 'Unknown')
+
+        logger.info("Re-optimizing site: %s (%s)", site_name, company_id)
+
+        try:
+            wp_username, wp_password = load_wp_credentials(site)
+        except ValueError as e:
+            logger.error("Credentials error for '%s': %s", company_id, e)
+            continue
+
+        wp = WordPressClient(site['wordpress_url'], wp_username, wp_password)
+        if not wp.verify_auth():
+            logger.error("Cannot authenticate with WordPress for '%s'. Skipping.", company_id)
+            continue
+
+        optimizer = ArticleReoptimizer(wp, site)
+        results = optimizer.reoptimize_all()
+
+        success_count = sum(1 for r in results if r['success'])
+        logger.info("Site '%s': %d/%d posts re-optimized", site_name, success_count, len(results))
+
+    logger.info("=" * 80)
+    logger.info("Re-optimization complete!")
+    logger.info("=" * 80)
+    return 0
+
+
 if __name__ == "__main__":
-    exit_code = main()
+    args = parse_args()
+    if args.reoptimize:
+        exit_code = reoptimize()
+    else:
+        exit_code = main(dry_run=args.dry_run, keywords_file=args.keywords)
     sys.exit(exit_code)
