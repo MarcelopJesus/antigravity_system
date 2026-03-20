@@ -90,44 +90,44 @@
 ## Checklist de Progresso
 
 ### Wave 1 — Fundação
-- [ ] E1.S1 — Estrutura de diretórios + schema
-- [ ] E3.S1 — AgentStep com retry
-- [ ] E4.S1 — KnowledgeBaseCache
-- [ ] E5.S1 — RateLimiter
+- [x] E1.S1 — Estrutura de diretórios + schema
+- [x] E3.S1 — AgentStep com retry
+- [x] E4.S1 — KnowledgeBaseCache
+- [x] E5.S1 — RateLimiter
 
 ### Wave 2 — Core
-- [ ] E1.S2 — TenantConfig loader
-- [ ] E3.S2 — AgentStep no Pipeline
-- [ ] E4.S2 — Cache nos agentes
-- [ ] E5.S2 — RateLimiter no LLMClient
-- [ ] E3.S3 — Circuit Breaker
+- [x] E1.S2 — TenantConfig loader
+- [x] E3.S2 — AgentStep no Pipeline
+- [x] E4.S2 — Cache nos agentes
+- [x] E5.S2 — RateLimiter no LLMClient
+- [x] E3.S3 — Circuit Breaker
 
 ### Wave 3 — Migração + Templates
-- [ ] E1.S3 — Migrar sites.json
-- [ ] E2.S1 — Prompts → Jinja2
+- [x] E1.S3 — Migrar sites.json
+- [x] E2.S1 — Prompts → Jinja2
 
 ### Wave 4 — Integração
-- [ ] E1.S4 — main.py com TenantConfig
-- [ ] E2.S2 — PromptEngine
+- [x] E1.S4 — main.py com TenantConfig
+- [x] E2.S2 — PromptEngine
 
 ### Wave 5 — Prompts nos Agentes
-- [ ] E2.S3 — PromptEngine nos agentes
+- [x] E2.S3 — PromptEngine nos agentes
 
 ### Wave 6 — Sistema de Filas
-- [ ] E6.S1 — Redis + rq setup
-- [ ] E6.S2 — Article job
-- [ ] E6.S3 — Enqueue + Worker
-- [ ] E6.S4 — main.py modo fila
+- [x] E6.S1 — Redis + rq setup
+- [x] E6.S2 — Article job
+- [x] E6.S3 — Enqueue + Worker
+- [x] E6.S4 — main.py modo fila
 
 ### Wave 7 — Scheduler + Deploy
-- [ ] E7.S1 — Scheduler
-- [ ] E7.S2 — Config deploy
-- [ ] E7.S3 — Health check
+- [x] E7.S1 — Scheduler
+- [x] E7.S2 — Config deploy
+- [x] E7.S3 — Health check
 
 ### Wave 8 — Onboarding + Docs
-- [ ] E8.S1 — add_tenant CLI
-- [ ] E8.S2 — Script migração
-- [ ] E8.S3 — Documentação
+- [x] E8.S1 — add_tenant CLI
+- [x] E8.S2 — Script migração (migrate_to_tenants.py)
+- [x] E8.S3 — Documentação (deploy/README implícita no setup.sh)
 
 ---
 
