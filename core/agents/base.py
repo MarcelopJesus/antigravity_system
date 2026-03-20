@@ -25,9 +25,12 @@ class BaseAgent(ABC):
 
     name: str = "base"
 
-    def __init__(self, llm_client, knowledge_base=None):
+    def __init__(self, llm_client, knowledge_base=None, prompt_engine=None, kb_cache=None, tenant_config=None):
         self.llm = llm_client
         self.kb = knowledge_base
+        self.prompt_engine = prompt_engine
+        self.kb_cache = kb_cache
+        self.tenant_config = tenant_config
 
     @abstractmethod
     def _build_prompt(self, input_data) -> str:
@@ -49,6 +52,18 @@ class BaseAgent(ABC):
 
     def _load_kb(self):
         """Loads knowledge base content filtered for this agent."""
+        # Use cache if available
+        if self.kb_cache and self.tenant_config:
+            kb_filter = self._get_kb_filter()
+            if kb_filter is None:
+                return ""
+            return self.kb_cache.get(
+                self.tenant_config.company_id,
+                self.tenant_config.kb_path,
+                file_filter=kb_filter
+            )
+
+        # Fallback to direct KB load
         if self.kb is None:
             return ""
         kb_filter = self._get_kb_filter()

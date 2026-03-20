@@ -2,7 +2,6 @@
 import markdown
 from core.agents.base import BaseAgent
 from core.logger import get_logger
-from config.prompts import CONVERSION_EDITOR_PROMPT
 
 logger = get_logger(__name__)
 
@@ -12,6 +11,15 @@ class EditorAgent(BaseAgent):
 
     def _build_prompt(self, input_data):
         draft_html = input_data
+
+        # Use PromptEngine if available
+        if self.prompt_engine:
+            return self.prompt_engine.render("editor", {
+                "draft_html": draft_html,
+            })
+
+        # Fallback to hardcoded prompts
+        from config.prompts import CONVERSION_EDITOR_PROMPT
         return CONVERSION_EDITOR_PROMPT.format(draft_html=draft_html)
 
     def _parse_response(self, raw_text, input_data=None):

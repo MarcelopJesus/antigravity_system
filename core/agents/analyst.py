@@ -2,7 +2,6 @@
 import json
 import re
 from core.agents.base import BaseAgent, AgentResult
-from config.prompts import CONTENT_ANALYST_PROMPT
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -32,6 +31,28 @@ class AnalystAgent(BaseAgent):
         else:
             links_text = str(links_inventory)
 
+        # Use PromptEngine if available
+        if self.prompt_engine:
+            local_seo = {}
+            if self.tenant_config:
+                local_seo = self.tenant_config.get_local_seo()
+            local_seo_section = ""
+            if local_seo and local_seo.get("primary_location"):
+                local_seo_section = (
+                    f"7. SEO LOCAL (se aplicável):\n"
+                    f"   - Localização do profissional: {local_seo.get('primary_location', '')}\n"
+                    f"   - Mencione a localização naturalmente no outline\n"
+                    f"   - Inclua termos locais: {', '.join(local_seo.get('local_keywords', []))}"
+                )
+            return self.prompt_engine.render("analyst", {
+                "keyword": keyword,
+                "links_list": links_text,
+                "knowledge_base": kb_text,
+                "local_seo_section": local_seo_section,
+            })
+
+        # Fallback to hardcoded prompts
+        from config.prompts import CONTENT_ANALYST_PROMPT
         local_seo = site_config.get("local_seo", {}) if site_config else {}
         if local_seo:
             local_seo_section = (

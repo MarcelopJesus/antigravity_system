@@ -151,14 +151,24 @@ def fix_image_placement(html):
 class ArticlePipeline:
     """Orchestrates the article generation pipeline: analyst -> writer -> humanizer -> editor."""
 
-    def __init__(self, llm_client: LLMClient, knowledge_base: KnowledgeBase):
+    def __init__(self, llm_client: LLMClient, knowledge_base: KnowledgeBase = None,
+                 prompt_engine=None, kb_cache=None, tenant_config=None):
         self.llm = llm_client
         self.kb = knowledge_base
+        self.prompt_engine = prompt_engine
+        self.kb_cache = kb_cache
+        self.tenant_config = tenant_config
 
-        self.analyst = AnalystAgent(llm_client, knowledge_base)
-        self.writer = WriterAgent(llm_client, knowledge_base)
-        self.humanizer = HumanizerAgent(llm_client, knowledge_base)
-        self.editor = EditorAgent(llm_client, knowledge_base)
+        agent_kwargs = {
+            "prompt_engine": prompt_engine,
+            "kb_cache": kb_cache,
+            "tenant_config": tenant_config,
+        }
+
+        self.analyst = AnalystAgent(llm_client, knowledge_base, **agent_kwargs)
+        self.writer = WriterAgent(llm_client, knowledge_base, **agent_kwargs)
+        self.humanizer = HumanizerAgent(llm_client, knowledge_base, **agent_kwargs)
+        self.editor = EditorAgent(llm_client, knowledge_base, **agent_kwargs)
 
     def run(self, keyword, links_inventory, site_config=None) -> PipelineResult:
         """Runs the full 4-agent article pipeline.

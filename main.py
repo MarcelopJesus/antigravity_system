@@ -13,6 +13,11 @@ from core.wordpress_client import WordPressClient
 from core.logger import setup_logger, get_logger
 from core.dry_run import load_keywords_from_file, save_dry_run_output
 from config.settings import load_wp_credentials
+from core.tenant_config import TenantConfig
+from core.prompt_engine import PromptEngine
+from core.kb_cache import KnowledgeBaseCache
+from core.rate_limiter import RateLimiter
+from core.circuit_breaker import CircuitBreaker
 
 # Initialize logging before anything else
 setup_logger()
@@ -64,21 +69,25 @@ def main(dry_run=False, keywords_file=None):
         logger.error("Keywords file '%s' not found. Aborting.", keywords_file)
         return 1
 
-    try:
-        with open('config/sites.json', 'r') as f:
-            sites = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        logger.error("Failed to load sites.json: %s", e)
+    # --- Load tenants: try new config/tenants/ first, fallback to sites.json ---
+    tenant_configs = _load_tenant_configs()
+    if not tenant_configs:
+        logger.error("No tenants found. Check config/tenants/ or config/sites.json.")
         return 1
+
+    # Shared infrastructure
+    rate_limiter = RateLimiter(rpm=15)
+    circuit_breaker = CircuitBreaker(name="gemini", failure_threshold=5, cooldown=60)
+    kb_cache = KnowledgeBaseCache(ttl=3600)
 
     total_processed = 0
     total_success = 0
     total_errors = 0
     total_images_failed = 0
 
-    for site in sites:
-        company_id = site.get('company_id', 'default')
-        site_name = site.get('site_name', 'Unknown')
+    for tc in tenant_configs:
+        company_id = tc.company_id
+        site_name = tc.site_name
 
         logger.info("=" * 80)
         logger.info("Processing Company: %s (ID: %s)", site_name, company_id)
@@ -89,18 +98,41 @@ def main(dry_run=False, keywords_file=None):
         company_errors = 0
         company_images_failed = 0
 
-        kb_path = f"config/companies/{company_id}/knowledge_base"
+        kb_path = tc.kb_path
+        # Fallback KB path for legacy structure
+        if not os.path.exists(kb_path):
+            kb_path = f"config/companies/{company_id}/knowledge_base"
+
         try:
-            llm = LLMClient()
+            llm = LLMClient(rate_limiter=rate_limiter, circuit_breaker=circuit_breaker)
             kb = KnowledgeBase(kb_path)
-            pipeline = ArticlePipeline(llm, kb)
-            if not dry_run:
-                visual = VisualAgent(llm, kb)
-            growth = GrowthAgent(llm, kb)
+            prompt_engine = PromptEngine(tc)
+            pipeline = ArticlePipeline(
+                llm, kb,
+                prompt_engine=prompt_engine,
+                kb_cache=kb_cache,
+                tenant_config=tc,
+            )
+            agent_kwargs = {
+                "prompt_engine": prompt_engine,
+                "kb_cache": kb_cache,
+                "tenant_config": tc,
+            }
+            if not dry_run and "visual" in tc.get_enabled_agents():
+                visual = VisualAgent(llm, kb, **agent_kwargs)
+            else:
+                visual = None
+            if "growth" in tc.get_enabled_agents():
+                growth = GrowthAgent(llm, kb, **agent_kwargs)
+            else:
+                growth = None
             logger.info("Pipeline initialized for '%s' with KB path: %s", company_id, kb_path)
         except Exception as e:
             logger.error("Error initializing pipeline for '%s': %s", company_id, e)
             continue
+
+        # Convert TenantConfig to site_config dict for backward compat
+        site = tc.to_site_config()
 
         # --- Keywords source ---
         if dry_run and keywords_file:
@@ -117,9 +149,9 @@ def main(dry_run=False, keywords_file=None):
                 continue
             try:
                 sheets = SheetsClient('config/service_account.json')
-                pending_keywords = sheets.get_pending_rows(site['spreadsheet_id'])
+                pending_keywords = sheets.get_pending_rows(tc.spreadsheet_id)
                 logger.info("Fetching Article Inventory for Link Building...")
-                inventory = sheets.get_all_completed_articles(site['spreadsheet_id'])
+                inventory = sheets.get_all_completed_articles(tc.spreadsheet_id)
                 logger.info("Found %d existing articles for potential linking.", len(inventory))
                 logger.info("Found %d pending keywords to write.", len(pending_keywords))
             except Exception as e:
@@ -135,7 +167,7 @@ def main(dry_run=False, keywords_file=None):
                 logger.error("Credentials error for '%s': %s", company_id, e)
                 continue
 
-            wp = WordPressClient(site['wordpress_url'], wp_username, wp_password)
+            wp = WordPressClient(tc.wordpress_url, wp_username, wp_password)
             if not wp.verify_auth():
                 logger.error("Cannot authenticate with WordPress for '%s'. Skipping.", company_id)
                 continue
@@ -156,7 +188,7 @@ def main(dry_run=False, keywords_file=None):
                 company_errors += 1
                 if not dry_run:
                     try:
-                        sheets.update_row(site['spreadsheet_id'], row_num, "", status=f"Error: {validation_error[:50]}")
+                        sheets.update_row(tc.spreadsheet_id, row_num, "", status=f"Error: {validation_error[:50]}")
                     except Exception:
                         pass
                 continue
@@ -188,12 +220,14 @@ def main(dry_run=False, keywords_file=None):
                             logger.info("  [DRY-RUN] 🔗 PRIORITY keyword for planilha: '%s'", priority_kw)
                 else:
                     # PRODUCTION: images + WordPress + Sheets
-                    # STEP 5: VISUAL (Images)
-                    final_content, featured_media_id, img_failures = visual.process_images(
-                        final_content, final_title, keyword, wp, kb_path,
-                        site_config=site, outline=result.outline
-                    )
-                    company_images_failed += img_failures
+                    # STEP 5: VISUAL (Images) — only if enabled
+                    featured_media_id = 0
+                    if visual:
+                        final_content, featured_media_id, img_failures = visual.process_images(
+                            final_content, final_title, keyword, wp, kb_path,
+                            site_config=site, outline=result.outline
+                        )
+                        company_images_failed += img_failures
 
                     # Clean orphan placeholders
                     final_content = clean_orphan_placeholders(final_content)
@@ -220,29 +254,30 @@ def main(dry_run=False, keywords_file=None):
                     link = post.get('link')
                     logger.info("  POSTED SUCCESSFULLY! Link: %s", link)
 
-                    sheets.update_row(site['spreadsheet_id'], row_num, link, status="Done")
+                    sheets.update_row(tc.spreadsheet_id, row_num, link, status="Done")
                     company_success += 1
 
                     # Add priority keywords for missing internal links
                     if result.missing_link_keywords:
                         for priority_kw in result.missing_link_keywords:
                             sheets.add_priority_keyword(
-                                site['spreadsheet_id'], priority_kw, source_article=final_title
+                                tc.spreadsheet_id, priority_kw, source_article=final_title
                             )
 
                 # GROWTH HACKER (both modes — but skip Sheets write in dry-run)
-                logger.info("  6. Growth Hacker Agent: Suggesting new topics...")
-                try:
-                    growth_result = growth.execute({"title": final_title})
-                    if growth_result.success:
-                        for topic in growth_result.content:
-                            logger.info("     New Idea: %s", topic)
-                            if not dry_run:
-                                sheets.add_new_topic(site['spreadsheet_id'], topic)
-                            else:
-                                logger.info("     [DRY-RUN] Would add topic to sheet: %s", topic)
-                except Exception as gh_err:
-                    logger.warning("  Growth Hacker failed (non-critical): %s", gh_err)
+                if growth:
+                    logger.info("  6. Growth Hacker Agent: Suggesting new topics...")
+                    try:
+                        growth_result = growth.execute({"title": final_title})
+                        if growth_result.success:
+                            for topic in growth_result.content:
+                                logger.info("     New Idea: %s", topic)
+                                if not dry_run:
+                                    sheets.add_new_topic(tc.spreadsheet_id, topic)
+                                else:
+                                    logger.info("     [DRY-RUN] Would add topic to sheet: %s", topic)
+                    except Exception as gh_err:
+                        logger.warning("  Growth Hacker failed (non-critical): %s", gh_err)
 
             except Exception as e:
                 company_errors += 1
@@ -250,7 +285,7 @@ def main(dry_run=False, keywords_file=None):
                 if not dry_run:
                     try:
                         error_msg = str(e)[:80]
-                        sheets.update_row(site['spreadsheet_id'], row_num, "", status=f"Error: {error_msg}")
+                        sheets.update_row(tc.spreadsheet_id, row_num, "", status=f"Error: {error_msg}")
                     except Exception as sheet_err:
                         logger.error("Could not update sheet with error status: %s", sheet_err)
 
@@ -271,9 +306,42 @@ def main(dry_run=False, keywords_file=None):
     logger.info("  Total Success:   %d", total_success)
     logger.info("  Total Errors:    %d", total_errors)
     logger.info("  Images Failed:   %d", total_images_failed)
+    logger.info("  KB Cache: %s", kb_cache.stats)
+    logger.info("  Rate Limiter: %s", rate_limiter.stats)
     logger.info("=" * 80)
 
     return 1 if total_errors > 0 else 0
+
+
+def _load_tenant_configs():
+    """Load tenant configs from config/tenants/ or fallback to sites.json.
+
+    Returns:
+        List of TenantConfig instances.
+    """
+    # Try new tenant config structure first
+    tenants = TenantConfig.list_all()
+    if tenants:
+        configs = []
+        for tenant_id in tenants:
+            try:
+                tc = TenantConfig.load(tenant_id)
+                configs.append(tc)
+                logger.info("Loaded tenant: %s", tenant_id)
+            except Exception as e:
+                logger.error("Error loading tenant '%s': %s", tenant_id, e)
+        if configs:
+            return configs
+
+    # Fallback to sites.json
+    logger.info("No tenants in config/tenants/. Falling back to sites.json...")
+    try:
+        with open('config/sites.json', 'r') as f:
+            sites = json.load(f)
+        return [TenantConfig.from_site_config(site) for site in sites]
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.error("Failed to load sites.json: %s", e)
+        return []
 
 
 def reoptimize():

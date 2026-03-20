@@ -1,7 +1,6 @@
 """WriterAgent — Writes the full article based on the outline."""
 import json
 from core.agents.base import BaseAgent
-from config.prompts import SENIOR_WRITER_PROMPT
 
 
 class WriterAgent(BaseAgent):
@@ -23,6 +22,17 @@ class WriterAgent(BaseAgent):
         keyword_variations = outline_json.get('keyword_variations', [])
         lsi_keywords = outline_json.get('lsi_keywords', [])
 
+        # Use PromptEngine if available
+        if self.prompt_engine:
+            return self.prompt_engine.render("writer", {
+                "outline_json": json.dumps(outline_json, indent=2, ensure_ascii=False),
+                "keyword_variations": ', '.join(keyword_variations) if keyword_variations else 'N/A',
+                "lsi_keywords": ', '.join(lsi_keywords) if lsi_keywords else 'N/A',
+                "knowledge_base": kb_text,
+            })
+
+        # Fallback to hardcoded prompts
+        from config.prompts import SENIOR_WRITER_PROMPT
         local_seo = site_config.get("local_seo", {}) if site_config else {}
         if local_seo:
             local_seo_section = (
