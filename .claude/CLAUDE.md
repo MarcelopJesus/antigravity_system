@@ -333,6 +333,7 @@ npm run trace -- workflow-name
 - Update checkboxes immediately after completing tasks
 - Maintain context of the current story being worked on
 - Save important state before long-running operations
+- **Meta-Learning:** Ao final de cada sessão, executar `/session-review` para capturar erros, acertos e padrões cross-session
 
 ### Error Recovery
 - Always provide recovery suggestions for failures
