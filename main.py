@@ -50,6 +50,24 @@ def parse_args(argv=None):
         default=False,
         help='Re-optimize existing WordPress articles (fix alt text, inject schema, update metadata)'
     )
+    parser.add_argument(
+        '--queue',
+        action='store_true',
+        default=False,
+        help='Enqueue jobs to Redis instead of processing synchronously'
+    )
+    parser.add_argument(
+        '--sync',
+        action='store_true',
+        default=False,
+        help='Force synchronous mode (skip Redis even if available)'
+    )
+    parser.add_argument(
+        '--tenant',
+        type=str,
+        default=None,
+        help='Process only a specific tenant by company_id'
+    )
     return parser.parse_args(argv)
 
 
@@ -388,10 +406,65 @@ def reoptimize():
     return 0
 
 
+def main_queue(dry_run=False, tenant_filter=None):
+    """Enqueue article jobs to Redis for async processing."""
+    from core.queue_manager import QueueManager
+
+    logger.info("=" * 80)
+    logger.info("SEO Orchestrator — QUEUE MODE")
+    logger.info("=" * 80)
+
+    qm = QueueManager()
+    if not qm.available:
+        logger.error("Redis is not available. Use --sync for synchronous mode.")
+        return 1
+
+    tenant_configs = _load_tenant_configs()
+    if tenant_filter:
+        tenant_configs = [tc for tc in tenant_configs if tc.company_id == tenant_filter]
+
+    if not tenant_configs:
+        logger.error("No tenants found.")
+        return 1
+
+    total_enqueued = 0
+
+    for tc in tenant_configs:
+        try:
+            sheets = SheetsClient('config/service_account.json')
+            pending = sheets.get_pending_rows(tc.spreadsheet_id)
+            max_per_run = tc.get_schedule().get("max_articles_per_run", 1)
+            pending = pending[:max_per_run]
+
+            if not pending:
+                logger.info("[%s] No pending keywords.", tc.company_id)
+                continue
+
+            jobs = qm.enqueue_tenant_batch(
+                tenant_id=tc.company_id,
+                keywords=pending,
+                dry_run=dry_run,
+                delay_between=5,
+            )
+            total_enqueued += len(jobs)
+            logger.info("[%s] Enqueued %d job(s)", tc.company_id, len(jobs))
+
+        except Exception as e:
+            logger.error("[%s] Error enqueuing: %s", tc.company_id, e)
+
+    logger.info("=" * 80)
+    logger.info("Total enqueued: %d jobs", total_enqueued)
+    logger.info("Start workers with: python worker.py")
+    logger.info("=" * 80)
+    return 0
+
+
 if __name__ == "__main__":
     args = parse_args()
     if args.reoptimize:
         exit_code = reoptimize()
+    elif args.queue:
+        exit_code = main_queue(dry_run=args.dry_run, tenant_filter=args.tenant)
     else:
         exit_code = main(dry_run=args.dry_run, keywords_file=args.keywords)
     sys.exit(exit_code)
