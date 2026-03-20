@@ -1,0 +1,12 @@
+# ============================================
+# Article Factory — Crontab
+# ============================================
+# Install: crontab deploy/crontab.txt
+# Or add these lines to existing crontab: crontab -e
+
+# Scheduler: 2x per day (09:00 and 21:00 BRT)
+0 9 * * * cd /opt/article-factory && /opt/article-factory/venv/bin/python scheduler.py --once >> /opt/article-factory/logs/scheduler.log 2>&1
+0 21 * * * cd /opt/article-factory && /opt/article-factory/venv/bin/python scheduler.py --once >> /opt/article-factory/logs/scheduler.log 2>&1
+
+# Health check: every 30 minutes
+*/30 * * * * cd /opt/article-factory && /opt/article-factory/venv/bin/python health_check.py --alert >> /opt/article-factory/logs/health.log 2>&1
