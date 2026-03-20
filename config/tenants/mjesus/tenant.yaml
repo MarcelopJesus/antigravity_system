@@ -1,0 +1,63 @@
+company_id: mjesus
+site_name: https://mjesus.com.br/
+wordpress_url: https://mjesus.com.br
+credentials_env_prefix: MJESUS
+spreadsheet_id: 1fzKSh0ct2kWzJy9prrHFWiZBBRP1mTwx9xM9mfuh6c4
+author_name: Marcelo Jesus
+business_name: Marcelo Jesus - Hipnoterapeuta TRI
+address: Av. Moema, 170 - Andar 10 Sala 102, Moema, São Paulo - SP
+phone: +55 11 96572-9858
+geo_lat: '-23.6008'
+geo_lng: '-46.6658'
+local_seo:
+  primary_location: Moema, São Paulo
+  neighborhood: Moema
+  city: São Paulo
+  state: SP
+  local_keywords:
+  - Hipnoterapia Moema
+  - Hipnoterapeuta Moema
+  - Terapia Moema
+persona:
+  name: Marcelo Jesus
+  title: Especialista em Terapia de Reintegração Implícita (TRI)
+  expertise: Especialista em Terapia de Reintegração Implícita (TRI)
+  prompt: Especialista em Terapia de Reintegração Implícita (TRI)
+cta:
+  type: whatsapp
+  url: https://wa.me/message/YT55SSBKHM4DC1
+  text: Falar com Marcelo Jesus no WhatsApp
+  box_text: Quer entender melhor o que está por trás do que você sente? Agende uma
+    avaliação.
+agents:
+  enabled:
+  - analyst
+  - writer
+  - humanizer
+  - editor
+  - visual
+  - growth
+  config:
+    analyst:
+      max_retries: 3
+    writer:
+      max_retries: 3
+      min_word_count: 1000
+    humanizer:
+      max_retries: 2
+    editor:
+      max_retries: 2
+    visual:
+      max_retries: 2
+    growth:
+      max_retries: 1
+schedule:
+  frequency: twice_daily
+  times:
+  - 09:00
+  - '21:00'
+  timezone: America/Sao_Paulo
+  max_articles_per_run: 1
+seo:
+  min_score: 40
+  max_internal_links: 5
