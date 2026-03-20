@@ -75,7 +75,11 @@ class AnalystAgent(BaseAgent):
         """Parse JSON from LLM response with robust extraction."""
         # Attempt 1: Direct parse
         try:
-            return json.loads(raw_text)
+            parsed = json.loads(raw_text)
+            # If model returned a list, extract first element
+            if isinstance(parsed, list) and len(parsed) > 0:
+                parsed = parsed[0]
+            return parsed
         except json.JSONDecodeError:
             pass
 
@@ -84,7 +88,10 @@ class AnalystAgent(BaseAgent):
         cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
         cleaned = re.sub(r'\s*```\s*$', '', cleaned)
         try:
-            return json.loads(cleaned)
+            parsed = json.loads(cleaned)
+            if isinstance(parsed, list) and len(parsed) > 0:
+                parsed = parsed[0]
+            return parsed
         except json.JSONDecodeError:
             pass
 
