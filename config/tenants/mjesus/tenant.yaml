@@ -33,7 +33,6 @@ agents:
   enabled:
   - analyst
   - writer
-  - humanizer
   - editor
   - visual
   - growth

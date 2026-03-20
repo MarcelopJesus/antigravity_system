@@ -141,7 +141,7 @@ class TestArticlePipelineE2E:
         assert result.success is True
         assert result.title == "Artigo sobre Ansiedade"
         assert "<h1>" in result.content
-        assert len(result.agent_metrics) == 4
+        assert len(result.agent_metrics) >= 3  # 3 without humanizer, 4 with
         assert result.total_duration_ms > 0
 
     def test_analyst_failure_stops_pipeline(self):

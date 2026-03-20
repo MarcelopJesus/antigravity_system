@@ -47,10 +47,10 @@ agents:
   enabled:
     - analyst
     - writer
-    - humanizer
     - editor
     - visual
     - growth
+    # humanizer removido — voz do profissional agora está integrada no writer
   config:
     analyst:
       max_retries: 3

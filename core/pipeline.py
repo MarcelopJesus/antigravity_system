@@ -167,8 +167,13 @@ class ArticlePipeline:
 
         self.analyst = AnalystAgent(llm_client, knowledge_base, **agent_kwargs)
         self.writer = WriterAgent(llm_client, knowledge_base, **agent_kwargs)
-        self.humanizer = HumanizerAgent(llm_client, knowledge_base, **agent_kwargs)
         self.editor = EditorAgent(llm_client, knowledge_base, **agent_kwargs)
+
+        # Humanizer is optional — only create if enabled
+        enabled = []
+        if tenant_config:
+            enabled = tenant_config.get_enabled_agents()
+        self.humanizer = HumanizerAgent(llm_client, knowledge_base, **agent_kwargs) if "humanizer" in enabled else None
 
     def run(self, keyword, links_inventory, site_config=None) -> PipelineResult:
         """Runs the full 4-agent article pipeline.
@@ -239,31 +244,35 @@ class ArticlePipeline:
                 total_duration_ms=(time.time() - start) * 1000,
             )
 
-        # STEP 3: HUMANIZER
-        logger.info("  3. Humanizer Agent: Injecting TRI Voice...")
-        humanizer_result = self.humanizer.execute(draft_html)
-        metrics.append(humanizer_result)
+        # STEP 3: HUMANIZER (optional — skipped when voice is integrated in Writer)
+        humanized_html = draft_html
+        if self.humanizer:
+            logger.info("  3. Humanizer Agent: Injecting Voice...")
+            humanizer_result = self.humanizer.execute(draft_html)
+            metrics.append(humanizer_result)
 
-        if not humanizer_result.success:
-            return PipelineResult(
-                success=False,
-                error=f"Humanizer failed: {humanizer_result.error}",
-                agent_metrics=metrics,
-                total_duration_ms=(time.time() - start) * 1000,
-            )
+            if not humanizer_result.success:
+                return PipelineResult(
+                    success=False,
+                    error=f"Humanizer failed: {humanizer_result.error}",
+                    agent_metrics=metrics,
+                    total_duration_ms=(time.time() - start) * 1000,
+                )
 
-        humanized_html = humanizer_result.content
-        is_valid, err = validate_html_output(
-            humanized_html, "Humanizer",
-            min_ratio=0.5, reference_len=len(draft_html)
-        )
-        if not is_valid:
-            return PipelineResult(
-                success=False,
-                error=f"Humanizer validation failed: {err}",
-                agent_metrics=metrics,
-                total_duration_ms=(time.time() - start) * 1000,
+            humanized_html = humanizer_result.content
+            is_valid, err = validate_html_output(
+                humanized_html, "Humanizer",
+                min_ratio=0.5, reference_len=len(draft_html)
             )
+            if not is_valid:
+                return PipelineResult(
+                    success=False,
+                    error=f"Humanizer validation failed: {err}",
+                    agent_metrics=metrics,
+                    total_duration_ms=(time.time() - start) * 1000,
+                )
+        else:
+            logger.info("  3. Humanizer: Skipped (voice integrated in Writer)")
 
         # STEP 4: EDITOR
         logger.info("  4. Editor Agent: Polishing & SEO Check...")
