@@ -138,7 +138,7 @@ def process_article(tenant_id, keyword, row_num=0, dry_run=False, priority="norm
                 yoast_keyword=keyword,
                 yoast_meta_desc=meta_desc,
                 slug=pipeline_result.slug,
-                excerpt=pipeline_result.excerpt,
+                excerpt=meta_desc,
                 og_title=final_title,
                 og_description=meta_desc,
             )

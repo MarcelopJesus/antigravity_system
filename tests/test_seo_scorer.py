@@ -87,12 +87,11 @@ class TestSeoScorer:
         check = next(c for c in result.checks if c.name == "h1_unique")
         assert not check.passed
 
-    def test_h1_zero_is_ok_wordpress_provides(self, scorer):
-        """0 H1 is valid — WordPress renders the post title as H1."""
+    def test_h1_unique_fail_none(self, scorer):
         html = "<h2>No H1</h2><p>content</p>"
         result = scorer.score(html, "test", "meta")
         check = next(c for c in result.checks if c.name == "h1_unique")
-        assert check.passed
+        assert not check.passed
 
     def test_heading_hierarchy_pass(self, scorer):
         html = "<h1>T</h1><h2>S</h2><h3>SS</h3><h2>S2</h2>"

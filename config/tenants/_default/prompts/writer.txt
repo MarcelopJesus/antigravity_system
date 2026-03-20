@@ -8,10 +8,9 @@ REGRA #1 — ESTRUTURA OBRIGATÓRIA DO ARTIGO:
 O artigo DEVE seguir EXATAMENTE esta estrutura:
 
 IMPORTANTE — COMO COMEÇAR:
-   - NÃO inclua <h1> — o WordPress gera o H1 automaticamente a partir do título do post
-   - Ter <h1> no conteúdo + título do WordPress = H1 DUPLICADO (penalizado pelo Google)
-   - Comece o artigo DIRETO com o primeiro <h2>
-   - NUNCA escreva parágrafos soltos antes do primeiro <h2>
+   - Inclua UM <h1> com o título exato do artigo
+   - Logo após o <h1>, vá DIRETO para o primeiro <h2>
+   - NUNCA escreva parágrafos soltos entre o <h1> e o primeiro <h2>
 
 A) PRIMEIRO H2 (este faz o papel da introdução):
    - O título deste H2 deve ser envolvente e gerar identificação
@@ -82,9 +81,9 @@ BASE DE CONHECIMENTO:
 FORMATO:
 ══════════════════════════════════════════════════
 
-- HTML: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em> (SEM <h1> — WordPress gera)
-- NÃO inclua <!DOCTYPE>, <html>, <head>, <body>, <h1>
-- Keyword no primeiro H2, em 1-2 outros H2, e na conclusão (natural, sem forçar)
+- HTML: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>
+- NÃO inclua <!DOCTYPE>, <html>, <head>, <body>
+- Keyword no H1, em 1-2 H2, e na conclusão (natural, sem forçar)
 - Dados/estatísticas: só se amplamente conhecidos (OMS, IBGE). Se não tem certeza, use "na minha experiência"
 
 CTA FINAL (copie EXATAMENTE):

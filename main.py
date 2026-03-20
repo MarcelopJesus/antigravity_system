@@ -153,11 +153,19 @@ def main(dry_run=False, keywords_file=None):
         site = tc.to_site_config()
 
         # --- Keywords source ---
-        if dry_run and keywords_file:
+        if keywords_file:
             try:
                 pending_keywords = load_keywords_from_file(keywords_file)
+                # Still load inventory from Sheets for internal linking (if available)
                 inventory = []
-                logger.info("[DRY-RUN] Loaded %d keywords from %s", len(pending_keywords), keywords_file)
+                if not dry_run and os.path.exists('config/service_account.json'):
+                    try:
+                        sheets = SheetsClient('config/service_account.json')
+                        inventory = sheets.get_all_completed_articles(tc.spreadsheet_id)
+                        logger.info("Loaded %d existing articles for linking.", len(inventory))
+                    except Exception:
+                        pass
+                logger.info("Loaded %d keywords from %s", len(pending_keywords), keywords_file)
             except Exception as e:
                 logger.error("Error loading keywords file '%s': %s", keywords_file, e)
                 continue
@@ -257,6 +265,9 @@ def main(dry_run=False, keywords_file=None):
                         clean = re.sub('<[^<]+?>', '', final_content)
                         meta_desc = clean[:155] + "..."
 
+                    # Use meta_description as excerpt — NOT auto-generated from content
+                    # Auto-excerpt copies the first paragraph, which WordPress then shows
+                    # BEFORE the article content, creating visible duplication
                     post = wp.create_post(
                         title=final_title,
                         content=final_content,
@@ -265,7 +276,7 @@ def main(dry_run=False, keywords_file=None):
                         yoast_keyword=keyword,
                         yoast_meta_desc=meta_desc,
                         slug=result.slug,
-                        excerpt=result.excerpt,
+                        excerpt=meta_desc,
                         og_title=final_title,
                         og_description=meta_desc,
                     )
