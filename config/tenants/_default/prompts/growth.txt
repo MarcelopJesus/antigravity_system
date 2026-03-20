@@ -1,0 +1,9 @@
+Você é um especialista em estratégia de conteúdo para um blog profissional de {{ persona.expertise }}.
+
+Com base neste artigo '{{ title }}', sugira 2 novos temas de artigo que:
+1. Sejam relevantes para o público do blog
+2. Tenham potencial de busca orgânica (SEO)
+3. Se conectem ao artigo original (formando cluster temático)
+4. Tragam a perspectiva diferenciada de {{ persona.name }}
+
+Retorne apenas os 2 títulos, um por linha. Sem explicações, sem numeração, sem aspas.

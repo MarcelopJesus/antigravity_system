@@ -1,0 +1,79 @@
+# ============================================
+# Tenant Configuration Template (_default)
+# ============================================
+# This is the base template. Per-tenant configs inherit from here.
+# Only override what differs in each tenant's tenant.yaml.
+# ============================================
+
+# --- Required Fields ---
+company_id: ""                    # Unique slug identifier (e.g., "mjesus")
+site_name: ""                     # Display name
+wordpress_url: ""                 # Full URL (e.g., "https://site.com")
+credentials_env_prefix: ""        # Reads {PREFIX}_WP_USERNAME and {PREFIX}_WP_APP_PASSWORD from .env
+spreadsheet_id: ""                # Google Sheets spreadsheet ID
+
+# --- Author / Business ---
+author_name: ""
+business_name: ""
+address: ""
+phone: ""
+geo_lat: ""
+geo_lng: ""
+
+# --- Local SEO ---
+local_seo:
+  primary_location: ""
+  neighborhood: ""
+  city: ""
+  state: ""
+  local_keywords: []
+
+# --- Persona ---
+persona:
+  name: ""
+  title: ""
+  expertise: ""
+  prompt: ""                      # Short persona description for prompts
+
+# --- CTA (Call to Action) ---
+cta:
+  type: "whatsapp"                # whatsapp | email | phone | link
+  url: ""
+  text: ""                        # Button text
+  box_text: ""                    # Box description text
+
+# --- Agents ---
+agents:
+  enabled:
+    - analyst
+    - writer
+    - humanizer
+    - editor
+    - visual
+    - growth
+  config:
+    analyst:
+      max_retries: 3
+    writer:
+      max_retries: 3
+      min_word_count: 1000
+    humanizer:
+      max_retries: 2
+    editor:
+      max_retries: 2
+    visual:
+      max_retries: 2
+    growth:
+      max_retries: 1
+
+# --- Schedule ---
+schedule:
+  frequency: "twice_daily"        # daily | twice_daily | weekly
+  times: ["09:00", "21:00"]
+  timezone: "America/Sao_Paulo"
+  max_articles_per_run: 1
+
+# --- SEO ---
+seo:
+  min_score: 40                   # Minimum SEO score to publish (0-100)
+  max_internal_links: 5
