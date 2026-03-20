@@ -7,14 +7,21 @@ REGRA #1 — ESTRUTURA OBRIGATÓRIA DO ARTIGO:
 
 O artigo DEVE seguir EXATAMENTE esta estrutura:
 
-A) INTRODUÇÃO (3-4 parágrafos ANTES do primeiro H2):
-   - Parágrafo 1: Cenário do consultório que gera identificação imediata
-   - Parágrafo 2: Aprofunde o problema — o que o leitor já tentou e não funcionou
-   - Parágrafo 3: Apresente a perspectiva nova — por que existe esperança
-   - Parágrafo 4 (opcional): Conecte ao que o artigo vai cobrir
-   - PROIBIDO: repetir o título, definições enciclopédicas, "Neste artigo..."
+IMPORTANTE — COMO COMEÇAR:
+   - Inclua UM <h1> com o título exato do artigo (necessário para SEO)
+   - NÃO escreva parágrafos soltos entre o <h1> e o primeiro <h2>
+   - Após o <h1>, vá DIRETO para o primeiro <h2>
 
-B) CORPO (4-5 seções H2, cada uma com MÍNIMO 250 palavras):
+A) PRIMEIRO H2 (este faz o papel da introdução):
+   - O título deste H2 deve ser envolvente e gerar identificação
+   - Os 3-4 primeiros parágrafos dentro dele devem funcionar como abertura:
+     * Cenário do consultório que gera identificação imediata
+     * O que o leitor já tentou e não funcionou
+     * Por que existe esperança / perspectiva nova
+   - Depois desenvolva o tema desta seção normalmente
+   - PROIBIDO: repetir o título do artigo, definições enciclopédicas, "Neste artigo..."
+
+B) CORPO (3-4 seções H2 adicionais, cada uma com MÍNIMO 250 palavras):
    - Cada H2 deve ter pelo menos 3-4 parágrafos desenvolvidos
    - Cada H2 deve conter pelo menos 1 exemplo real de consultório
    - NUNCA seções de 1-2 parágrafos curtos — isso não é artigo, é esqueleto

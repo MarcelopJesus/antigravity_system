@@ -28,8 +28,11 @@ TAREFAS:
    - Garanta que cada seção H2 tem pelo menos 2 parágrafos de conteúdo
 
 4. HTML:
+   - Mantenha exatamente 1 <h1> no início (título do artigo)
+   - Se existem parágrafos soltos entre o <h1> e o primeiro <h2>, mova-os para DENTRO do primeiro <h2>
+   - NÃO deve haver texto solto entre <h1> e o primeiro <h2>
+   - Hierarquia: H1 > H2 > H3 (1 único H1)
    - Todos os tags fechados corretamente
-   - Hierarquia H1 > H2 > H3 (1 único H1)
    - CTA no final
 
 5. NÃO FAÇA:
