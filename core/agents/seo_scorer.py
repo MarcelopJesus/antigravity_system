@@ -76,18 +76,18 @@ class SeoScorer:
             detail=f"first 300 chars checked"
         ))
 
-        # 3. Unique H1 (10 pts)
+        # 3. H1 check (10 pts) — 0 is OK (WordPress renders title as H1), 1 is OK, 2+ is bad
         h1_count = len(re.findall(r'<h1[\s>]', html, re.IGNORECASE))
-        h1_unique = h1_count == 1
+        h1_ok = h1_count <= 1
         checks.append(SeoCheck(
             name="h1_unique",
-            score=10 if h1_unique else 0,
+            score=10 if h1_ok else 0,
             max_score=10,
-            passed=h1_unique,
-            detail=f"found {h1_count} H1 tag(s)"
+            passed=h1_ok,
+            detail=f"found {h1_count} H1 in content (WordPress provides title H1)"
         ))
-        if not h1_unique:
-            warnings.append(f"Expected exactly 1 H1, found {h1_count}")
+        if h1_count > 1:
+            warnings.append(f"Multiple H1 tags: {h1_count} (WordPress already adds one)")
 
         # 4. Heading hierarchy (10 pts)
         headings = re.findall(r'<(h[1-6])[\s>]', html, re.IGNORECASE)

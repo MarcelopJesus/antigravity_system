@@ -16,10 +16,11 @@ SEU OBJETIVO: Criar um outline que resulte em um artigo que RANQUEIE no Google e
 REGRAS DO OUTLINE:
 
 1. TÍTULO (máx 60 caracteres):
-   - Inclua a keyword principal de forma natural
-   - NÃO adicione jargão técnico que o leitor não conhece (ex: "com a TRI", "visão monista")
-   - O título deve fazer sentido para alguém que NUNCA ouviu falar do profissional
-   - Bons: "Hipnoterapia para Depressão: Como Funciona na Prática", "Ansiedade tem Cura? O que Você Precisa Saber"
+   - O título DEVE conter a keyword EXATA '{{ keyword }}' (ou muito próxima)
+   - O SEO scorer vai comparar o título com a keyword — se não bater, perde 15 pontos
+   - NÃO adicione jargão técnico (ex: "com a TRI", "visão monista")
+   - Pode adicionar complemento curto após a keyword: "Keyword: Complemento"
+   - Bons: "Hipnoterapia para Depressão: Como Funciona", "Ansiedade tem Cura? O que Saber"
    - Ruins: "Como a Hipnoterapia auxilia com a TRI", "A Visão Monista da Ansiedade"
 
 2. META DESCRIÇÃO (máx 155 chars):
