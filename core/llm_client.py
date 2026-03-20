@@ -1,4 +1,4 @@
-"""LLMClient — Shared Gemini client with API key rotation and retry."""
+"""LLMClient — Shared Gemini client with API key rotation, retry, rate limiting, and circuit breaker."""
 import google.generativeai as genai
 from config.settings import GOOGLE_API_KEYS_LIST, GEMINI_MODEL_NAME
 from core.logger import get_logger
@@ -7,15 +7,24 @@ logger = get_logger(__name__)
 
 
 class LLMClient:
-    """Manages Gemini API access with key rotation and retry logic."""
+    """Manages Gemini API access with key rotation, rate limiting, and circuit breaker."""
 
-    def __init__(self, api_keys=None, model_name=None):
+    def __init__(self, api_keys=None, model_name=None, rate_limiter=None, circuit_breaker=None):
+        """
+        Args:
+            api_keys: List of API keys (default: from env).
+            model_name: Gemini model name (default: from env).
+            rate_limiter: Optional RateLimiter instance.
+            circuit_breaker: Optional CircuitBreaker instance.
+        """
         self.api_keys = api_keys or GOOGLE_API_KEYS_LIST
         if not self.api_keys:
             raise ValueError("GOOGLE_API_KEYS_LIST is not set or empty in environment.")
 
         self.model_name = model_name or GEMINI_MODEL_NAME
         self.current_key_index = 0
+        self.rate_limiter = rate_limiter
+        self.circuit_breaker = circuit_breaker
         self._configure_current_key()
 
     def _configure_current_key(self):
@@ -36,21 +45,37 @@ class LLMClient:
         return True
 
     def execute_with_retry(self, func, *args, **kwargs):
-        """Executes a function with retry logic for API keys."""
+        """Executes a function with retry logic, rate limiting, and circuit breaker."""
+        # Check circuit breaker
+        if self.circuit_breaker:
+            self.circuit_breaker.allow_request()
+
+        # Apply rate limiting
+        if self.rate_limiter:
+            self.rate_limiter.throttle()
+
         max_retries = len(self.api_keys)
         attempts = 0
 
         while attempts < max_retries:
             try:
-                return func(*args, **kwargs)
+                result = func(*args, **kwargs)
+                # Success — record it
+                if self.circuit_breaker:
+                    self.circuit_breaker.record_success()
+                return result
             except Exception as e:
                 error_str = str(e)
                 if "400" in error_str or "429" in error_str or "403" in error_str or "API key expired" in error_str:
                     logger.warning("API Error with key #%d: %s", self.current_key_index + 1, e)
+                    if self.circuit_breaker:
+                        self.circuit_breaker.record_failure()
                     if not self._rotate_key():
                         raise e
                     attempts += 1
                 else:
+                    if self.circuit_breaker:
+                        self.circuit_breaker.record_failure()
                     raise e
 
         raise Exception("All API keys failed.")
