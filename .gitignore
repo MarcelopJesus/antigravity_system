@@ -40,3 +40,8 @@ Thumbs.db
 .aios-core/local/
 .claude/settings.local.json
 .aios/install-log.txt
+
+# AIOX Local (AIOX)
+.aiox-core/local/
+.aiox/install-log.txt
+SETUP-NOVA-MAQUINA.md
