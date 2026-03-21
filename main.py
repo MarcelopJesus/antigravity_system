@@ -319,11 +319,22 @@ def main(dry_run=False, keywords_file=None):
                         growth_result = growth.execute({"title": final_title})
                         if growth_result.success:
                             for topic in growth_result.content:
-                                logger.info("     New Idea: %s", topic)
-                                if not dry_run:
-                                    sheets.add_new_topic(tc.spreadsheet_id, topic)
+                                # Handle both dict format (cluster map) and plain string
+                                if isinstance(topic, dict):
+                                    topic_text = topic.get("keyword", "")
+                                    topic_type = topic.get("type", "cluster")
+                                    tag = f"Cluster: {final_title}" if topic_type == "cluster" else "Pillar"
+                                    display = f"[{topic_type}] {topic_text}"
                                 else:
-                                    logger.info("     [DRY-RUN] Would add topic to sheet: %s", topic)
+                                    topic_text = str(topic)
+                                    tag = ""
+                                    display = topic_text
+
+                                logger.info("     New Idea: %s", display)
+                                if not dry_run and topic_text:
+                                    sheets.add_new_topic(tc.spreadsheet_id, topic_text)
+                                else:
+                                    logger.info("     [DRY-RUN] Would add topic to sheet: %s", display)
                     except Exception as gh_err:
                         logger.warning("  Growth Hacker failed (non-critical): %s", gh_err)
 
