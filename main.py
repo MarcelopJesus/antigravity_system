@@ -6,6 +6,7 @@ import sys
 from core.llm_client import LLMClient
 from core.knowledge_base import KnowledgeBase
 from core.pipeline import ArticlePipeline, validate_keyword, clean_orphan_placeholders
+from core.seo.schema import inject_schema_into_html
 from core.agents.visual import VisualAgent
 from core.agents.growth import GrowthAgent
 from core.sheets_client import SheetsClient
@@ -67,6 +68,13 @@ def parse_args(argv=None):
         type=str,
         default=None,
         help='Process only a specific tenant by company_id'
+    )
+    parser.add_argument(
+        '--discover-keywords',
+        type=str,
+        default=None,
+        metavar='SEED',
+        help='Discover new keyword opportunities from a seed keyword'
     )
     return parser.parse_args(argv)
 
@@ -235,6 +243,15 @@ def main(dry_run=False, keywords_file=None):
                 if dry_run:
                     # DRY-RUN: skip images, save locally
                     final_content = clean_orphan_placeholders(final_content)
+                    # Inject schema into HTML for local viewing (WP strips <script>)
+                    if result.schema_meta:
+                        import json as _json
+                        try:
+                            schemas_list = _json.loads(result.schema_meta)
+                            schema_strings = [_json.dumps(s, ensure_ascii=False, indent=2) for s in schemas_list]
+                            final_content = inject_schema_into_html(final_content, schema_strings)
+                        except (ValueError, TypeError):
+                            pass
                     result.content = final_content
                     html_path, json_path = save_dry_run_output(company_id, keyword, result)
                     logger.info("  [DRY-RUN] Article saved to %s", html_path)
@@ -265,9 +282,10 @@ def main(dry_run=False, keywords_file=None):
                         clean = re.sub('<[^<]+?>', '', final_content)
                         meta_desc = clean[:155] + "..."
 
-                    # Use meta_description as excerpt — NOT auto-generated from content
-                    # Auto-excerpt copies the first paragraph, which WordPress then shows
-                    # BEFORE the article content, creating visible duplication
+                    # Excerpt: send empty to prevent theme from showing duplicate text
+                    # before article content. Yoast uses yoast_meta_desc for SEO snippet
+                    # (not the WP excerpt field), so SEO is unaffected.
+                    # A single space prevents WP from auto-generating excerpt from content.
                     post = wp.create_post(
                         title=final_title,
                         content=final_content,
@@ -276,9 +294,10 @@ def main(dry_run=False, keywords_file=None):
                         yoast_keyword=keyword,
                         yoast_meta_desc=meta_desc,
                         slug=result.slug,
-                        excerpt=meta_desc,
+                        excerpt=" ",
                         og_title=final_title,
                         og_description=meta_desc,
+                        schema_json=result.schema_meta,
                     )
                     link = post.get('link')
                     logger.info("  POSTED SUCCESSFULLY! Link: %s", link)
@@ -470,9 +489,41 @@ def main_queue(dry_run=False, tenant_filter=None):
     return 0
 
 
+def discover_keywords_cmd(seed_keyword, tenant_id=None):
+    """Discover new keyword opportunities from a seed keyword."""
+    from core.keyword_discovery.discovery import discover_keywords
+
+    logger.info("=" * 60)
+    logger.info("Keyword Discovery for: '%s'", seed_keyword)
+    logger.info("=" * 60)
+
+    # Get existing keywords from sheets if tenant provided
+    existing = set()
+    if tenant_id:
+        try:
+            tc = TenantConfig.load(tenant_id)
+            sheets = SheetsClient('config/service_account.json')
+            inventory = sheets.get_all_completed_articles(tc.spreadsheet_id)
+            existing = {item.get('keyword', '').lower() for item in inventory}
+            logger.info("Loaded %d existing keywords for filtering", len(existing))
+        except Exception as e:
+            logger.warning("Could not load existing keywords: %s", e)
+
+    results = discover_keywords(seed_keyword, existing_keywords=existing)
+
+    logger.info("Found %d new keyword opportunities:", len(results))
+    for i, kw in enumerate(results, 1):
+        logger.info("  %2d. [%s] %s (score: %d)", i, kw['source'], kw['keyword'], kw['score'])
+
+    return results
+
+
 if __name__ == "__main__":
     args = parse_args()
-    if args.reoptimize:
+    if args.discover_keywords:
+        discover_keywords_cmd(args.discover_keywords, tenant_id=args.tenant)
+        sys.exit(0)
+    elif args.reoptimize:
         exit_code = reoptimize()
     elif args.queue:
         exit_code = main_queue(dry_run=args.dry_run, tenant_filter=args.tenant)

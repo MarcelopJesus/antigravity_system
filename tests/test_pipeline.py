@@ -78,11 +78,35 @@ class TestValidateHtmlOutput:
 
 
 class TestCleanOrphanPlaceholders:
-    def test_removes(self):
+    def test_removes_standard(self):
         assert "AB" == clean_orphan_placeholders("A<!-- IMG_PLACEHOLDER -->B")
+
+    def test_removes_with_extra_whitespace(self):
+        assert "AB" == clean_orphan_placeholders("A<!--  IMG_PLACEHOLDER  -->B")
+
+    def test_removes_no_spaces(self):
+        assert "AB" == clean_orphan_placeholders("A<!--IMG_PLACEHOLDER-->B")
+
+    def test_removes_bracket_format(self):
+        assert "AB" == clean_orphan_placeholders("A[IMG_PLACEHOLDER]B")
+
+    def test_removes_curly_format(self):
+        assert "AB" == clean_orphan_placeholders("A{IMG_PLACEHOLDER}B")
+
+    def test_removes_multiple_placeholders(self):
+        html = "<p>A</p><!-- IMG_PLACEHOLDER --><p>B</p><!-- IMG_PLACEHOLDER --><p>C</p>"
+        result = clean_orphan_placeholders(html)
+        assert "IMG_PLACEHOLDER" not in result
+        assert "<p>A</p>" in result
+        assert "<p>C</p>" in result
 
     def test_noop(self):
         assert "<p>ok</p>" == clean_orphan_placeholders("<p>ok</p>")
+
+    def test_cleans_excessive_newlines(self):
+        html = "<p>A</p>\n\n\n\n\n<p>B</p>"
+        result = clean_orphan_placeholders(html)
+        assert "\n\n\n" not in result
 
 
 # ──────────────────────────────────────────────

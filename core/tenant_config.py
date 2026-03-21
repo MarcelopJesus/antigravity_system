@@ -149,6 +149,11 @@ class TenantConfig:
         return self._data.get(key, default)
 
     @property
+    def raw_config(self):
+        """Access the raw config dict."""
+        return self._data
+
+    @property
     def company_id(self):
         return self._data.get("company_id", "")
 
@@ -198,13 +203,24 @@ class TenantConfig:
             "box_text": "",
         })
 
-    def get_cta_html(self):
-        """Generate CTA HTML from tenant config."""
+    def get_cta_html(self, slug=""):
+        """Generate CTA HTML from tenant config with optional UTM tracking.
+
+        Args:
+            slug: Article slug for conversion tracking (appended as WhatsApp text param).
+        """
         cta = self.get_cta()
         cta_type = cta.get("type", "link")
         url = cta.get("url", "")
         text = cta.get("text", "Entre em contato")
         box_text = cta.get("box_text", "")
+
+        # Add UTM tracking for WhatsApp CTA
+        if cta_type == "whatsapp" and slug and url:
+            # Append tracking text so we know which article generated the lead
+            tracking_text = f"Vim+do+artigo+{slug}"
+            separator = "&" if "?" in url else "?"
+            url = f"{url}{separator}text={tracking_text}"
 
         btn_class = "btn-whatsapp" if cta_type == "whatsapp" else "btn-cta"
 

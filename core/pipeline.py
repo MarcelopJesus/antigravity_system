@@ -10,11 +10,14 @@ from core.agents.humanizer import HumanizerAgent
 from core.agents.editor import EditorAgent
 from core.agents.base import AgentResult
 from core.seo.internal_links import inject_internal_links
+from core.seo.topic_clusters import get_cluster_for_keyword, get_cluster_links, is_pillar_keyword, inject_toc
 from core.seo.schema import (
     generate_article_schema, generate_local_business_schema,
     generate_faq_schema, extract_faq_from_html, inject_schema_into_html,
+    prepare_schema_meta,
 )
 from core.agents.seo_scorer import SeoScorer
+from core.agents.serp_analyzer import generate_serp_brief
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -40,6 +43,7 @@ class PipelineResult:
     slug: str = ""
     excerpt: str = ""
     missing_link_keywords: list = field(default_factory=list)
+    schema_meta: str = ""
 
 
 def generate_slug(title):
@@ -97,8 +101,19 @@ def validate_html_output(html, agent_name, min_ratio=0.0, reference_len=0):
 
 
 def clean_orphan_placeholders(html):
-    """Removes any remaining IMG_PLACEHOLDER tags from final HTML."""
-    return html.replace("<!-- IMG_PLACEHOLDER -->", "")
+    """Removes any remaining IMG_PLACEHOLDER tags from final HTML.
+
+    Handles whitespace variants and alternative formats to ensure
+    no placeholder artifacts remain in published content.
+    """
+    # Standard HTML comment format with flexible whitespace
+    html = re.sub(r'<!--\s*IMG_PLACEHOLDER\s*-->', '', html)
+    # Alternative bracket formats
+    html = re.sub(r'\[IMG_PLACEHOLDER\]', '', html)
+    html = re.sub(r'\{IMG_PLACEHOLDER\}', '', html)
+    # Clean up any resulting empty lines (3+ newlines → 2)
+    html = re.sub(r'\n{3,}', '\n\n', html)
+    return html
 
 
 def fix_image_placement(html):
@@ -189,12 +204,24 @@ class ArticlePipeline:
         start = time.time()
         metrics = []
 
+        # STEP 0: SERP ANALYSIS (competitive intelligence)
+        logger.info("  0. SERP Analyzer: Fetching competitive data...")
+        serp_brief = generate_serp_brief(keyword)
+        if serp_brief:
+            logger.info("     SERP: %d results, %d PAA questions, target %d words",
+                        len(serp_brief.get("top_results", [])),
+                        len(serp_brief.get("people_also_ask", [])),
+                        serp_brief.get("recommended_word_count", 1800))
+        else:
+            logger.info("     SERP: Skipped (no API key or API error)")
+
         # STEP 1: ANALYST
         logger.info("  1. Analyst Agent: Creating Strategic Outline...")
         analyst_result = self.analyst.execute({
             "keyword": keyword,
             "links_inventory": links_inventory,
             "site_config": site_config or {},
+            "serp_brief": serp_brief or {},
         })
         metrics.append(analyst_result)
 
@@ -218,6 +245,14 @@ class ArticlePipeline:
 
         final_title = outline_json.get('title', keyword.title())
         logger.info("     Title: %s", final_title)
+
+        # Adjust target word count from SERP data (Story 3.4)
+        if serp_brief and serp_brief.get("recommended_word_count"):
+            rwc = serp_brief["recommended_word_count"]
+            # Clamp between 1500 and 3000
+            rwc = max(1500, min(3000, rwc))
+            outline_json["target_word_count"] = rwc
+            logger.info("     Target word count adjusted to %d (from SERP data)", rwc)
 
         # STEP 2: WRITER
         logger.info("  2. Senior Writer Agent: Writing Content...")
@@ -301,12 +336,31 @@ class ArticlePipeline:
                 total_duration_ms=(time.time() - start) * 1000,
             )
 
-        # STEP 5: INTERNAL LINKS INJECTION
+        # STEP 5: INTERNAL LINKS INJECTION (cluster-aware)
         links_strategy = outline_json.get('internal_links_strategy', [])
         missing_link_keywords = []
-        if links_strategy:
+
+        # Get cluster links if keyword belongs to a cluster
+        cluster_links_list = []
+        topic_clusters = []
+        if self.tenant_config:
+            topic_clusters = self.tenant_config.raw_config.get("topic_clusters", [])
+        cluster = get_cluster_for_keyword(keyword, topic_clusters)
+        if cluster:
+            cluster_links_list = get_cluster_links(keyword, cluster, links_inventory)
+            logger.info("  5. Internal Links: %d cluster links + strategy links...", len(cluster_links_list))
+
+            # Inject TOC for pillar pages
+            if is_pillar_keyword(keyword, topic_clusters):
+                final_content = inject_toc(final_content)
+                logger.info("     Pillar page detected: TOC injected")
+        else:
             logger.info("  5. Internal Links: Injecting links...")
-            final_content, num_links = inject_internal_links(final_content, links_strategy)
+
+        if links_strategy or cluster_links_list:
+            final_content, num_links = inject_internal_links(
+                final_content, links_strategy, cluster_links=cluster_links_list
+            )
             logger.info("     Inserted %d internal links", num_links)
 
             # Detect links to articles that don't exist in inventory
@@ -328,6 +382,9 @@ class ArticlePipeline:
             keyword=keyword,
             meta_description=outline_json.get('meta_description', ''),
             title=final_title,
+            lsi_keywords=outline_json.get('lsi_keywords', []),
+            slug=generate_slug(final_title),
+            entities=outline_json.get('expected_entities', []),
         )
         logger.info("     SEO Score: %d/100 (%s)", seo_result.total, seo_result.grade)
         for check in seo_result.checks:
@@ -390,14 +447,27 @@ class ArticlePipeline:
                 schemas.append(faq_schema)
                 logger.info("     FAQ schema generated with %d items", len(faq_items))
 
-        final_content = inject_schema_into_html(final_content, schemas)
-        logger.info("  7. Schema Markup: Injected %d schema(s)", len(schemas))
+        # Schema is NOT injected into HTML content (WordPress strips <script> tags)
+        # Instead, prepare as meta field for WordPress REST API
+        schema_meta = prepare_schema_meta(schemas)
+        logger.info("  7. Schema Markup: Prepared %d schema(s) for meta field", len(schemas))
 
         total_ms = (time.time() - start) * 1000
         logger.info("  Pipeline complete in %.0fms", total_ms)
 
         article_slug = generate_slug(final_title)
         article_excerpt = generate_excerpt(final_content)
+
+        # STEP 8: CONVERSION TRACKING — Add UTM to WhatsApp CTA links
+        if article_slug:
+            tracking_param = f"text=Vim+do+artigo+{article_slug}"
+            # Add tracking to wa.me links that don't already have text param
+            final_content = re.sub(
+                r'(href="https://wa\.me/[^"]*?)(")',
+                lambda m: m.group(1) + ('&' if '?' in m.group(1) else '?') + tracking_param + m.group(2)
+                if 'text=' not in m.group(1) else m.group(0),
+                final_content
+            )
 
         return PipelineResult(
             success=True,
@@ -420,4 +490,5 @@ class ArticlePipeline:
             slug=article_slug,
             excerpt=article_excerpt,
             missing_link_keywords=missing_link_keywords,
+            schema_meta=schema_meta,
         )

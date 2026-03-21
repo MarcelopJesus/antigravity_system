@@ -437,7 +437,7 @@ pytest tests/                           # Rodar testes
 
 ### Regras CRÍTICAS do Projeto
 
-1. **Excerpt do WordPress:** SEMPRE usar `meta_description` como excerpt, NUNCA auto-gerar do conteúdo (causa duplicação visual)
+1. **Excerpt do WordPress:** Enviar excerpt=" " (espaço) para evitar duplicação visual. Yoast usa `_yoast_wpseo_metadesc` separadamente para SEO.
 2. **H1 no conteúdo:** Manter 1 H1 no HTML do artigo. NÃO remover.
 3. **Sem parágrafos soltos entre H1 e primeiro H2:** O primeiro H2 faz papel de introdução
 4. **Prompts em Jinja2:** Ficam em `config/tenants/_default/prompts/`. Cada agente tem seu .txt
@@ -448,9 +448,9 @@ pytest tests/                           # Rodar testes
 9. **sites.json:** Legacy, mantido para backward compatibility. Nova config em `config/tenants/`
 10. **Testes:** 263 testes. SEMPRE rodar antes de commitar. Zero regressão.
 
-### Problema ABERTO (não resolvido)
+### Problema CORRIGIDO (Story 1.3)
 
-- **Duplicação visual no WordPress:** O tema do WordPress mostra o título + excerpt ANTES do conteúdo do artigo, criando duplicação visual. O excerpt já foi corrigido para usar meta_description, mas o tema pode ainda estar mostrando um preview customizado. Investigar o tema WordPress do mjesus.com.br.
+- **Duplicação visual no WordPress:** Corrigido em Story 1.3. Excerpt agora envia " " (espaço) em vez de meta_description. Yoast usa campo próprio para SEO. Validação visual pendente no próximo artigo publicado.
 
 ### Tenant Atual
 

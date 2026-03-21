@@ -1,6 +1,7 @@
 """VisualAgent — Generates image prompts and handles image processing."""
 import re
 import base64
+import html as html_module
 import requests
 from pathlib import Path
 from core.agents.base import BaseAgent, AgentResult
@@ -8,6 +9,59 @@ from core.logger import get_logger
 from config.prompts import IMAGE_PROMPT_GENERATION
 
 logger = get_logger(__name__)
+
+
+def _build_alt_text(keyword, context, max_length=125):
+    """Build SEO-optimized alt text: keyword + context, max max_length chars."""
+    if not context or context.strip() == keyword.strip():
+        alt = keyword
+    else:
+        alt = f"{keyword} - {context}"
+    # Truncate at word boundary
+    if len(alt) > max_length:
+        alt = alt[:max_length].rsplit(' ', 1)[0]
+    return alt
+
+
+def _get_section_title_from_outline(outline, index=0, from_end=False):
+    """Extract a section heading from the analyst outline (list of dicts).
+
+    Args:
+        outline: Outline dict with 'outline' key containing list of section dicts.
+        index: Which section to pick (0=first, etc).
+        from_end: If True, pick from the end.
+
+    Returns:
+        Section title string, or empty string if not found.
+    """
+    if not outline or not isinstance(outline, dict):
+        return ""
+    sections = outline.get('outline', [])
+    if not sections:
+        return ""
+
+    # Filter to content sections (skip FAQ/Conclusão if possible)
+    content_sections = []
+    for s in sections:
+        if isinstance(s, dict):
+            heading = s.get('heading', '')
+            content_sections.append(heading)
+        elif isinstance(s, str):
+            content_sections.append(s)
+
+    if not content_sections:
+        return ""
+
+    if from_end:
+        selected = content_sections[-1]
+    elif index < len(content_sections):
+        selected = content_sections[index]
+    else:
+        selected = content_sections[0]
+
+    # Clean H2/H3 prefix
+    selected = re.sub(r'^H[2-6]\.\s*', '', selected.strip())
+    return selected
 
 
 class VisualAgent(BaseAgent):
@@ -169,8 +223,7 @@ class VisualAgent(BaseAgent):
                 if b64_image:
                     image_data = base64.b64decode(b64_image)
                     filename = f"{slug}-capa.png"
-                    title_short = final_title[:60].rsplit(' ', 1)[0] if len(final_title) > 60 else final_title
-                    cover_alt = f"{keyword} - {title_short}"
+                    cover_alt = _build_alt_text(keyword, final_title)
                     media_id, media_url = wp_client.upload_media(image_data, filename, alt_text=cover_alt)
                     featured_media_id = media_id
                     logger.info("     Featured Image Set (ID: %s, alt: '%s')", media_id, cover_alt[:50])
@@ -189,18 +242,12 @@ class VisualAgent(BaseAgent):
                 if b64_image:
                     image_data = base64.b64decode(b64_image)
                     filename = f"{slug}-corpo.png"
-                    # Use first H2 section title for alt text context
-                    first_section = ""
-                    if outline and isinstance(outline, dict):
-                        sections = outline.get('outline', [])
-                        for s in sections:
-                            if isinstance(s, str) and s.strip().startswith('H2'):
-                                first_section = re.sub(r'^H2\.\s*', '', s.strip())
-                                break
-                    body_alt = f"{keyword} - {first_section}" if first_section else f"{keyword} - {final_title}"
+                    first_section = _get_section_title_from_outline(outline, index=0)
+                    body_alt = _build_alt_text(keyword, first_section or final_title)
                     media_id, media_url = wp_client.upload_media(image_data, filename, alt_text=body_alt)
 
-                    body_img_html = f"<figure class='wp-block-image'><img src='{media_url}' alt='{body_alt}'/></figure>"
+                    escaped_alt = html_module.escape(body_alt, quote=True)
+                    body_img_html = f"<figure class='wp-block-image'><img src='{media_url}' alt='{escaped_alt}'/></figure>"
 
                     if "<!-- IMG_PLACEHOLDER -->" in final_content:
                         final_content = final_content.replace("<!-- IMG_PLACEHOLDER -->", body_img_html, 1)
@@ -229,18 +276,12 @@ class VisualAgent(BaseAgent):
                 if b64_image:
                     image_data = base64.b64decode(b64_image)
                     filename = f"{slug}-final.png"
-                    # Use last outline section title for context, fallback to article title
-                    last_section = ""
-                    if outline and isinstance(outline, dict):
-                        sections = outline.get('outline', [])
-                        for s in reversed(sections):
-                            if isinstance(s, str) and s.strip().startswith('H2'):
-                                last_section = re.sub(r'^H2\.\s*', '', s.strip())
-                                break
-                    final_alt = f"{keyword} - {last_section}" if last_section else f"{keyword} - {final_title}"
+                    last_section = _get_section_title_from_outline(outline, from_end=True)
+                    final_alt = _build_alt_text(keyword, last_section or final_title)
                     media_id, media_url = wp_client.upload_media(image_data, filename, alt_text=final_alt)
 
-                    final_img_html = f"<figure class='wp-block-image'><img src='{media_url}' alt='{final_alt}'/></figure>"
+                    escaped_alt = html_module.escape(final_alt, quote=True)
+                    final_img_html = f"<figure class='wp-block-image'><img src='{media_url}' alt='{escaped_alt}'/></figure>"
 
                     if "<!-- IMG_PLACEHOLDER -->" in final_content:
                         final_content = final_content.replace("<!-- IMG_PLACEHOLDER -->", final_img_html, 1)

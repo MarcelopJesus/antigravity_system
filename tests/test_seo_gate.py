@@ -33,16 +33,16 @@ class TestSeoGateLogic(unittest.TestCase):
         assert grade == "D"
         # Pipeline should return success=False for this
 
-    def test_score_40_to_59_warns(self):
-        """Score 40-59 should result in grade C (publish with warning)."""
+    def test_score_40_to_49_warns(self):
+        """Score 40-49 should result in grade C (publish with warning)."""
         from core.agents.seo_scorer import _compute_grade
-        grade = _compute_grade(50)
+        grade = _compute_grade(45)
         assert grade == "C"
 
-    def test_score_60_plus_passes(self):
-        """Score >= 60 should pass normally."""
+    def test_score_50_plus_passes(self):
+        """Score >= 50 should pass normally (v2 grade scale)."""
         from core.agents.seo_scorer import _compute_grade
-        grade = _compute_grade(60)
+        grade = _compute_grade(50)
         assert grade == "B"
 
 

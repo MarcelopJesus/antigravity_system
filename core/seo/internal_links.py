@@ -1,9 +1,15 @@
-"""Internal links injection — inserts links into HTML based on Analyst strategy."""
+"""Internal links injection — inserts links into HTML based on Analyst strategy.
+
+Supports cluster-aware linking: cluster links get priority over general links.
+"""
 import re
 
 
-def inject_internal_links(html: str, links_strategy: list, max_links: int = 5) -> tuple:
+def inject_internal_links(html: str, links_strategy: list, max_links: int = 5,
+                           cluster_links: list = None) -> tuple:
     """Inject internal links into HTML based on the Analyst's link strategy.
+
+    Cluster links get priority over general links when available.
 
     For each link in the strategy (up to max_links):
     1. Searches for the anchor text in the HTML (case-insensitive)
@@ -15,14 +21,32 @@ def inject_internal_links(html: str, links_strategy: list, max_links: int = 5) -
         html: The article HTML content.
         links_strategy: List of dicts with 'text', 'url' keys.
         max_links: Maximum number of links to insert.
+        cluster_links: Optional list of cluster-priority links to insert first.
 
     Returns:
         Tuple of (html_with_links, num_links_inserted).
     """
-    if not links_strategy or not html:
+    if not html:
         return html, 0
 
     inserted = 0
+
+    # Cluster links get priority — insert first
+    if cluster_links:
+        for link_item in cluster_links:
+            if inserted >= max_links:
+                break
+            anchor = link_item.get('text', '').strip()
+            url = link_item.get('url', '').strip()
+            if not anchor or not url:
+                continue
+            new_html = _try_insert_link(html, anchor, url)
+            if new_html:
+                html = new_html
+                inserted += 1
+
+    if not links_strategy:
+        return html, inserted
 
     for link_item in links_strategy:
         if inserted >= max_links:

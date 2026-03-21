@@ -23,9 +23,10 @@ REGRAS DO OUTLINE:
    - Bons: "Hipnoterapia para Depressão: Como Funciona", "Ansiedade tem Cura? O que Saber"
    - Ruins: "Como a Hipnoterapia auxilia com a TRI", "A Visão Monista da Ansiedade"
 
-2. META DESCRIÇÃO (máx 155 chars):
+2. META DESCRIÇÃO (máx 150 chars — LIMITE RÍGIDO):
    - Inclua benefício concreto + keyword
    - Tom de convite, não de aula
+   - IMPORTANTE: Conte os caracteres — acima de 150 perde pontos no SEO scorer
 
 3. ESTRUTURA DO OUTLINE:
    - 4 a 5 seções H2 de CONTEÚDO (+ 1 FAQ + 1 Conclusão = 6-7 total)
@@ -75,15 +76,22 @@ REGRAS DO OUTLINE:
    - 3 variações naturais
    - 5 termos LSI
 
+8. ENTIDADES ESPERADAS:
+   - Liste 3-5 entidades (pessoas, conceitos, locais, organizações) que o artigo DEVE mencionar
+   - Ex: para "ansiedade generalizada": ["ansiedade", "terapia cognitiva", "serotonina", "OMS", "psicólogo"]
+
 {{ local_seo_section }}
+
+{{ serp_section }}
 
 SAÍDA (JSON estrito — retorne UM OBJETO, não um array):
 {
   "title": "Título curto com keyword",
-  "meta_description": "Descrição (máx 155 chars)",
+  "meta_description": "Descrição (máx 150 chars)",
   "search_intent": "informational|transactional|navigational",
   "keyword_variations": ["var1", "var2", "var3"],
   "lsi_keywords": ["lsi1", "lsi2", "lsi3", "lsi4", "lsi5"],
+  "expected_entities": ["entidade1", "entidade2", "entidade3"],
   "is_pillar_page": false,
   "target_word_count": 1800,
   "internal_links_strategy": [

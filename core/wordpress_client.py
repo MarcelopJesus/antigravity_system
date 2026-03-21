@@ -77,7 +77,8 @@ class WordPressClient:
 
     def create_post(self, title, content, featured_media_id=None, status='publish',
                      yoast_keyword=None, yoast_meta_desc=None, slug=None,
-                     excerpt=None, og_title=None, og_description=None):
+                     excerpt=None, og_title=None, og_description=None,
+                     schema_json=None):
         """
         Creates a new post with Yoast SEO support and complete payload.
         """
@@ -107,6 +108,9 @@ class WordPressClient:
 
         if og_description:
             payload['meta']['_yoast_wpseo_opengraph-description'] = og_description
+
+        if schema_json:
+            payload['meta']['_seo_schema_json_ld'] = schema_json
 
         if not payload['meta']:
             del payload['meta']

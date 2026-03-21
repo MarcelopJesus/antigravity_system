@@ -7,7 +7,7 @@ from core.agents.analyst import AnalystAgent
 from core.agents.writer import WriterAgent
 from core.agents.humanizer import HumanizerAgent
 from core.agents.editor import EditorAgent
-from core.agents.visual import VisualAgent
+from core.agents.visual import VisualAgent, _build_alt_text, _get_section_title_from_outline
 from core.agents.growth import GrowthAgent
 
 
@@ -231,3 +231,60 @@ class TestVisualAgent:
         img = tmp_path / "test.heic"
         img.write_bytes(b'\x00\x00\x00\x18ftypheic')
         assert VisualAgent._is_valid_image(img) is False
+
+
+class TestBuildAltText:
+    """Tests for alt text generation (Story 1.2)."""
+
+    def test_keyword_plus_context(self):
+        alt = _build_alt_text("ansiedade", "Como funciona o tratamento")
+        assert alt == "ansiedade - Como funciona o tratamento"
+
+    def test_max_length_125(self):
+        long_context = "A" * 200
+        alt = _build_alt_text("keyword", long_context)
+        assert len(alt) <= 125
+
+    def test_truncates_at_word_boundary(self):
+        alt = _build_alt_text("ansiedade", "palavra " * 20)
+        assert len(alt) <= 125
+        assert not alt.endswith(" -")
+
+    def test_keyword_only_when_no_context(self):
+        alt = _build_alt_text("ansiedade", "")
+        assert alt == "ansiedade"
+
+    def test_keyword_only_when_context_equals_keyword(self):
+        alt = _build_alt_text("ansiedade", "ansiedade")
+        assert alt == "ansiedade"
+
+
+class TestGetSectionTitleFromOutline:
+    """Tests for outline section extraction (Story 1.2)."""
+
+    def test_dict_sections(self):
+        outline = {
+            "outline": [
+                {"heading": "H2. O que causa ansiedade", "notes": "..."},
+                {"heading": "H2. Como tratar", "notes": "..."},
+            ]
+        }
+        assert _get_section_title_from_outline(outline, index=0) == "O que causa ansiedade"
+
+    def test_from_end(self):
+        outline = {
+            "outline": [
+                {"heading": "H2. Primeiro", "notes": "..."},
+                {"heading": "H2. Ultimo", "notes": "..."},
+            ]
+        }
+        assert _get_section_title_from_outline(outline, from_end=True) == "Ultimo"
+
+    def test_empty_outline(self):
+        assert _get_section_title_from_outline({}) == ""
+        assert _get_section_title_from_outline(None) == ""
+        assert _get_section_title_from_outline({"outline": []}) == ""
+
+    def test_string_sections_fallback(self):
+        outline = {"outline": ["H2. Section One", "H2. Section Two"]}
+        assert _get_section_title_from_outline(outline, index=0) == "Section One"

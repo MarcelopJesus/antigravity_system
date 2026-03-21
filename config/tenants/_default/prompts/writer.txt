@@ -85,6 +85,7 @@ FORMATO:
 - NÃO inclua <!DOCTYPE>, <html>, <head>, <body>
 - Keyword no H1, em 1-2 H2, e na conclusão (natural, sem forçar)
 - Dados/estatísticas: só se amplamente conhecidos (OMS, IBGE). Se não tem certeza, use "na minha experiência"
+- FONTES EXTERNAS: Inclua 1-2 links para fontes autoritativas (ex: OMS, PubMed, Scielo, Wikipedia). Formato: <a href="URL" target="_blank" rel="noopener">texto âncora</a>. Google valoriza artigos que citam fontes confiáveis.
 
 CTA FINAL (copie EXATAMENTE):
 {{ cta_html }}

@@ -53,7 +53,7 @@ class TestSeoScorer:
         result = scorer.score(html, "ansiedade generalizada", "meta desc here 120+ chars" + "x" * 100)
         check = next(c for c in result.checks if c.name == "keyword_in_title")
         assert check.passed
-        assert check.score == 15
+        assert check.score == 12
 
     def test_keyword_in_title_fail(self, scorer):
         html = "<h1>Outro Título</h1><p>content</p>"
@@ -105,21 +105,63 @@ class TestSeoScorer:
         check = next(c for c in result.checks if c.name == "heading_hierarchy")
         assert not check.passed
 
-    def test_meta_description_length_pass(self, scorer):
+    def test_meta_description_length_ideal(self, scorer):
         meta = "A" * 130  # 130 chars, within 120-155
         result = scorer.score("<h1>T</h1><p>c</p>", "test", meta)
         check = next(c for c in result.checks if c.name == "meta_description_length")
         assert check.passed
+        assert check.score == 8
+
+    def test_meta_description_length_acceptable(self, scorer):
+        meta = "A" * 110  # 110 chars, within 100-119
+        result = scorer.score("<h1>T</h1><p>c</p>", "test", meta)
+        check = next(c for c in result.checks if c.name == "meta_description_length")
+        assert not check.passed  # passed = ideal only
+        assert check.score == 5
+
+    def test_meta_description_length_marginal(self, scorer):
+        meta = "A" * 160  # 160 chars, within 156-165
+        result = scorer.score("<h1>T</h1><p>c</p>", "test", meta)
+        check = next(c for c in result.checks if c.name == "meta_description_length")
+        assert not check.passed
+        assert check.score == 3
+
+    def test_meta_description_length_156_not_zero(self, scorer):
+        """Regression: 156 chars should score 3, not 0."""
+        meta = "A" * 156
+        result = scorer.score("<h1>T</h1><p>c</p>", "test", meta)
+        check = next(c for c in result.checks if c.name == "meta_description_length")
+        assert check.score == 3  # was 0 before fix
 
     def test_meta_description_length_fail_short(self, scorer):
         result = scorer.score("<h1>T</h1><p>c</p>", "test", "too short")
         check = next(c for c in result.checks if c.name == "meta_description_length")
         assert not check.passed
+        assert check.score == 0
 
-    def test_meta_description_length_fail_long(self, scorer):
+    def test_meta_description_length_fail_very_long(self, scorer):
         result = scorer.score("<h1>T</h1><p>c</p>", "test", "A" * 200)
         check = next(c for c in result.checks if c.name == "meta_description_length")
         assert not check.passed
+        assert check.score == 0
+
+    def test_meta_description_boundary_155(self, scorer):
+        meta = "A" * 155  # upper boundary of ideal
+        result = scorer.score("<h1>T</h1><p>c</p>", "test", meta)
+        check = next(c for c in result.checks if c.name == "meta_description_length")
+        assert check.score == 8
+
+    def test_meta_description_boundary_165(self, scorer):
+        meta = "A" * 165  # upper boundary of marginal
+        result = scorer.score("<h1>T</h1><p>c</p>", "test", meta)
+        check = next(c for c in result.checks if c.name == "meta_description_length")
+        assert check.score == 3
+
+    def test_meta_description_boundary_166(self, scorer):
+        meta = "A" * 166  # just above marginal → 0
+        result = scorer.score("<h1>T</h1><p>c</p>", "test", meta)
+        check = next(c for c in result.checks if c.name == "meta_description_length")
+        assert check.score == 0
 
     def test_keyword_density_pass(self, scorer):
         # ~1.5% density: keyword appears ~15 times in 1000 words
@@ -198,16 +240,16 @@ class TestSeoGrade:
     """Test grade computation."""
 
     def test_grade_a(self):
-        assert _compute_grade(80) == "A"
+        assert _compute_grade(70) == "A"
         assert _compute_grade(100) == "A"
 
     def test_grade_b(self):
-        assert _compute_grade(60) == "B"
-        assert _compute_grade(79) == "B"
+        assert _compute_grade(50) == "B"
+        assert _compute_grade(69) == "B"
 
     def test_grade_c(self):
         assert _compute_grade(40) == "C"
-        assert _compute_grade(59) == "C"
+        assert _compute_grade(49) == "C"
 
     def test_grade_d(self):
         assert _compute_grade(0) == "D"
@@ -240,10 +282,13 @@ class TestSeoScorerIntegration:
             keyword="ansiedade generalizada",
             meta_description="Entenda o que é ansiedade generalizada e como a TRI pode ajudar. Descubra uma abordagem breve e eficaz para lidar com a ansiedade.",
             title="Ansiedade Generalizada: O Que a TRI Revela",
+            lsi_keywords=["terapia", "tratamento", "sintomas", "emocional", "conflito"],
+            slug="ansiedade-generalizada-tri",
+            entities=["ansiedade", "TRI", "terapia"],
         )
-        assert result.total >= 60  # Should score at least B
+        assert result.total >= 50  # Should score at least B with new checks
         assert result.grade in ("A", "B")
-        assert len(result.checks) == 10
+        assert len(result.checks) == 15
 
     def test_all_checks_present(self):
         scorer = SeoScorer()
@@ -253,5 +298,112 @@ class TestSeoScorerIntegration:
             "keyword_in_title", "keyword_in_first_paragraph", "h1_unique",
             "heading_hierarchy", "meta_description_length", "keyword_density",
             "internal_links", "images", "word_count", "cta_present",
+            "readability", "semantic_coverage", "entity_coverage",
+            "slug_optimization", "outbound_links",
         }
         assert check_names == expected
+
+    def test_max_score_is_100(self):
+        scorer = SeoScorer()
+        result = scorer.score("<h1>T</h1><p>c</p>", "test", "meta")
+        total_max = sum(c.max_score for c in result.checks)
+        assert total_max == 100
+
+
+class TestSemanticCoverage:
+    """Test semantic coverage check (Story 2.2)."""
+
+    @pytest.fixture
+    def scorer(self):
+        return SeoScorer()
+
+    def test_high_coverage(self, scorer):
+        text = " ".join(["palavra"] * 500)
+        html = f"<h1>Test</h1><p>terapia tratamento sintomas emocional conflito {text}</p>"
+        result = scorer.score(html, "test", lsi_keywords=["terapia", "tratamento", "sintomas", "emocional", "conflito"])
+        check = next(c for c in result.checks if c.name == "semantic_coverage")
+        assert check.score == 5
+
+    def test_partial_coverage(self, scorer):
+        text = " ".join(["palavra"] * 500)
+        html = f"<h1>Test</h1><p>terapia tratamento {text}</p>"
+        result = scorer.score(html, "test", lsi_keywords=["terapia", "tratamento", "sintomas", "emocional", "conflito"])
+        check = next(c for c in result.checks if c.name == "semantic_coverage")
+        assert check.score == 3  # 2/5 = 40%
+
+    def test_low_coverage(self, scorer):
+        text = " ".join(["palavra"] * 500)
+        html = f"<h1>Test</h1><p>terapia {text}</p>"
+        result = scorer.score(html, "test", lsi_keywords=["terapia", "tratamento", "sintomas", "emocional", "conflito"])
+        check = next(c for c in result.checks if c.name == "semantic_coverage")
+        assert check.score == 0  # 1/5 = 20%
+
+    def test_no_lsi_keywords(self, scorer):
+        html = "<h1>Test</h1><p>content</p>"
+        result = scorer.score(html, "test")
+        check = next(c for c in result.checks if c.name == "semantic_coverage")
+        assert check.score == 0
+
+
+class TestSlugOptimization:
+    """Test slug optimization check (Story 2.4)."""
+
+    @pytest.fixture
+    def scorer(self):
+        return SeoScorer()
+
+    def test_good_slug(self, scorer):
+        html = "<h1>Test</h1><p>content</p>"
+        result = scorer.score(html, "ansiedade generalizada", slug="ansiedade-generalizada-tratamento")
+        check = next(c for c in result.checks if c.name == "slug_optimization")
+        assert check.score == 5
+
+    def test_slug_with_stop_words(self, scorer):
+        html = "<h1>Test</h1><p>content</p>"
+        result = scorer.score(html, "ansiedade", slug="ansiedade-e-o-que-fazer-para-melhorar")
+        check = next(c for c in result.checks if c.name == "slug_optimization")
+        assert check.score == 3  # keyword present but has stop words
+
+    def test_slug_without_keyword(self, scorer):
+        html = "<h1>Test</h1><p>content</p>"
+        result = scorer.score(html, "ansiedade", slug="como-melhorar-saude-mental")
+        check = next(c for c in result.checks if c.name == "slug_optimization")
+        assert check.score == 0
+
+    def test_no_slug(self, scorer):
+        html = "<h1>Test</h1><p>content</p>"
+        result = scorer.score(html, "test")
+        check = next(c for c in result.checks if c.name == "slug_optimization")
+        assert check.score == 0
+
+
+class TestOutboundLinks:
+    """Test outbound links check (Story 2.5)."""
+
+    @pytest.fixture
+    def scorer(self):
+        return SeoScorer()
+
+    def test_two_authoritative_links(self, scorer):
+        html = '<h1>T</h1><p>Segundo a <a href="https://pubmed.ncbi.nlm.nih.gov/123">pesquisa</a> e dados da <a href="https://www.who.int/news">OMS</a>.</p>'
+        result = scorer.score(html, "test")
+        check = next(c for c in result.checks if c.name == "outbound_links")
+        assert check.score == 2
+
+    def test_one_authoritative_link(self, scorer):
+        html = '<h1>T</h1><p>Segundo a <a href="https://pt.wikipedia.org/wiki/Ansiedade">Wikipedia</a>.</p>'
+        result = scorer.score(html, "test")
+        check = next(c for c in result.checks if c.name == "outbound_links")
+        assert check.score == 1
+
+    def test_only_cta_links_not_counted(self, scorer):
+        html = '<h1>T</h1><p>c</p><a href="https://wa.me/123">WhatsApp</a><a href="https://instagram.com/test">IG</a>'
+        result = scorer.score(html, "test")
+        check = next(c for c in result.checks if c.name == "outbound_links")
+        assert check.score == 0
+
+    def test_no_links(self, scorer):
+        html = "<h1>T</h1><p>No links here.</p>"
+        result = scorer.score(html, "test")
+        check = next(c for c in result.checks if c.name == "outbound_links")
+        assert check.score == 0

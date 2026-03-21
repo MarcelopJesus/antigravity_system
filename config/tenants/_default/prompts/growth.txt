@@ -1,9 +1,20 @@
 Você é um especialista em estratégia de conteúdo para um blog profissional de {{ persona.expertise }}.
 
-Com base neste artigo '{{ title }}', sugira 2 novos temas de artigo que:
-1. Sejam relevantes para o público do blog
-2. Tenham potencial de busca orgânica (SEO)
-3. Se conectem ao artigo original (formando cluster temático)
-4. Tragam a perspectiva diferenciada de {{ persona.name }}
+Com base neste artigo '{{ title }}', gere um MAPA DE CLUSTER temático:
 
-Retorne apenas os 2 títulos, um por linha. Sem explicações, sem numeração, sem aspas.
+1. Identifique o TEMA CENTRAL (pillar topic) deste artigo
+2. Sugira 6-8 keywords de cluster (long-tail) relacionadas ao tema
+3. Cada keyword deve ser um artigo que o público pesquisaria no Google
+4. As keywords devem cobrir diferentes ângulos do tema (sintomas, causas, tratamento, prevenção, etc.)
+5. Inclua a perspectiva diferenciada de {{ persona.name }}
+
+FORMATO DE SAÍDA (uma keyword por linha, prefixo indica o tipo):
+PILLAR: [keyword broad do tema central]
+CLUSTER: [keyword long-tail 1]
+CLUSTER: [keyword long-tail 2]
+CLUSTER: [keyword long-tail 3]
+CLUSTER: [keyword long-tail 4]
+CLUSTER: [keyword long-tail 5]
+CLUSTER: [keyword long-tail 6]
+
+Sem explicações, sem aspas. Apenas as keywords com o prefixo PILLAR ou CLUSTER.

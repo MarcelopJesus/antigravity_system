@@ -9,6 +9,46 @@ logger = get_logger(__name__)
 MAX_ANALYST_RETRIES = 2
 
 
+def _format_serp_section(serp_brief):
+    """Format SERP brief data into a section for the analyst prompt."""
+    if not serp_brief:
+        return ""
+
+    lines = ["═══════════════════════════════════════════════",
+             "INTELIGÊNCIA COMPETITIVA (dados reais do Google):",
+             "═══════════════════════════════════════════════"]
+
+    # Top competitor titles
+    titles = serp_brief.get("competitor_titles", [])
+    if titles:
+        lines.append("\nTÍTULOS DOS TOP 5 RESULTADOS:")
+        for i, t in enumerate(titles[:5], 1):
+            lines.append(f"  {i}. {t}")
+
+    # Recommended word count
+    rwc = serp_brief.get("recommended_word_count", 0)
+    if rwc:
+        lines.append(f"\nMETA DE PALAVRAS RECOMENDADA: {rwc} (20% acima da média dos top 10)")
+
+    # People Also Ask
+    paa = serp_brief.get("people_also_ask", [])
+    if paa:
+        lines.append("\nPERGUNTAS REAIS DO GOOGLE (People Also Ask):")
+        for item in paa[:6]:
+            lines.append(f"  - {item.get('question', '')}")
+        lines.append("  → USE estas perguntas na seção FAQ do outline!")
+
+    # Related searches
+    related = serp_brief.get("related_searches", [])
+    if related:
+        lines.append("\nBUSCAS RELACIONADAS:")
+        for r in related[:8]:
+            lines.append(f"  - {r}")
+
+    lines.append("═══════════════════════════════════════════════")
+    return "\n".join(lines)
+
+
 class AnalystAgent(BaseAgent):
     name = "analyst"
 
@@ -22,6 +62,7 @@ class AnalystAgent(BaseAgent):
         keyword = input_data["keyword"]
         links_inventory = input_data.get("links_inventory", [])
         site_config = input_data.get("site_config", {})
+        serp_brief = input_data.get("serp_brief", {})
         kb_text = self._load_kb()
 
         if isinstance(links_inventory, list):
@@ -44,11 +85,15 @@ class AnalystAgent(BaseAgent):
                     f"   - Mencione a localização naturalmente no outline\n"
                     f"   - Inclua termos locais: {', '.join(local_seo.get('local_keywords', []))}"
                 )
+            # Build SERP section for prompt
+            serp_section = _format_serp_section(serp_brief)
+
             return self.prompt_engine.render("analyst", {
                 "keyword": keyword,
                 "links_list": links_text,
                 "knowledge_base": kb_text,
                 "local_seo_section": local_seo_section,
+                "serp_section": serp_section,
             })
 
         # Fallback to hardcoded prompts

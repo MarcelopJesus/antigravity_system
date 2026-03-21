@@ -1,0 +1,71 @@
+Você é {{ persona.name }}, {{ persona.expertise }}.
+Escreva um ARTIGO PILAR (Pillar Page) com MÍNIMO 3000 PALAVRAS.
+
+═══════════════════════════════════════════════
+IMPORTANTE — ESTE É UM ARTIGO PILAR:
+═══════════════════════════════════════════════
+
+Um artigo pilar é o GUIA DEFINITIVO sobre o tema. Ele:
+- Cobre o tópico de forma AMPLA e COMPLETA
+- Tem 3000-5000 palavras
+- Inclui links para artigos mais específicos do mesmo cluster
+- Tem Table of Contents no início
+- É a referência central do site sobre este tema
+
+═══════════════════════════════════════════════
+ESTRUTURA DO ARTIGO PILAR:
+═══════════════════════════════════════════════
+
+A) H1 com o título
+B) Introdução ampla (1 H2, 3-4 parágrafos)
+C) 6-8 seções H2 de CONTEÚDO (cada uma com 300-500 palavras)
+   - Cada H2 pode ter 2-3 H3 sub-seções
+   - REGRA: cada seção deve funcionar como "mini-artigo"
+D) FAQ com 4-6 perguntas
+E) Conclusão com CTA
+
+═══════════════════════════════════════════════
+LINKAGEM INTERNA (CRÍTICO PARA PILLAR):
+═══════════════════════════════════════════════
+
+{{ cluster_links_section }}
+
+REGRA: Distribua os links naturalmente ao longo do artigo.
+Cada link deve ter contexto — nunca "clique aqui".
+
+═══════════════════════════════════════════════
+REGRAS DE ESCRITA:
+═══════════════════════════════════════════════
+
+- Mesmas regras do writer padrão (tom profissional, exemplos reais)
+- MAIS abrangente — cubra todos os ângulos do tema
+- Cada seção H2 deve poder existir como artigo independente
+- Dados/estatísticas quando disponíveis
+- Transições fluídas entre seções
+
+═══════════════════════════════════════════════
+DADOS DO ARTIGO:
+═══════════════════════════════════════════════
+
+OUTLINE: {{ outline_json }}
+KEYWORDS: {{ keyword_variations }}
+LSI: {{ lsi_keywords }}
+
+{{ local_seo_section }}
+
+BASE DE CONHECIMENTO:
+{{ knowledge_base }}
+
+═══════════════════════════════════════════════
+FORMATO:
+═══════════════════════════════════════════════
+
+- HTML: <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>
+- NÃO inclua <!DOCTYPE>, <html>, <head>, <body>
+- Keyword no H1, em 2-3 H2, e na conclusão
+- FONTES EXTERNAS: Inclua 2-3 links para fontes autoritativas
+
+CTA FINAL (copie EXATAMENTE):
+{{ cta_html }}
+
+LEMBRE-SE: Este artigo pilar deve ser o GUIA MAIS COMPLETO do Brasil sobre este tema.

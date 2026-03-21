@@ -110,16 +110,69 @@ def extract_faq_from_html(html):
 
 
 def inject_schema_into_html(html, schemas):
-    """Returns HTML unchanged — schema is no longer injected into post content.
+    """Inject schema JSON-LD into HTML for dry-run/local output only.
 
-    WordPress strips <script> tags from the content field for security,
-    causing JSON-LD to render as visible text. Schema markup should be
-    handled by Yoast SEO plugin or injected via wp_head hook instead.
+    For WordPress publishing, use prepare_schema_meta() instead —
+    WordPress strips <script> tags from the content field.
 
-    This function is kept for backward compatibility but is now a no-op.
-    Schema data is logged for reference only.
+    This function is used only for dry-run output files where
+    the HTML is viewed locally, not published via REST API.
     """
+    if not schemas:
+        return html
+
+    schema_scripts = []
+    for schema_json in schemas:
+        if schema_json:
+            schema_scripts.append(
+                f'<script type="application/ld+json">\n{schema_json}\n</script>'
+            )
+
+    if not schema_scripts:
+        return html
+
+    schema_block = "\n".join(schema_scripts)
+
+    # Insert before </body> if present, otherwise append
+    if '</body>' in html.lower():
+        html = re.sub(
+            r'(</body>)', f'{schema_block}\n\\1',
+            html, count=1, flags=re.IGNORECASE
+        )
+    else:
+        html = html + "\n" + schema_block
+
     return html
+
+
+def prepare_schema_meta(schemas):
+    """Prepare schema markup as a JSON string for WordPress meta field.
+
+    Returns a JSON string containing all schemas, ready to be sent
+    via WordPress REST API as the '_seo_schema_json_ld' meta field.
+
+    The WordPress site needs the mu-plugin (deploy/mu-seo-schema.php)
+    installed to read this meta and output it in wp_head.
+    """
+    if not schemas:
+        return ""
+
+    valid_schemas = [s for s in schemas if s]
+    if not valid_schemas:
+        return ""
+
+    # Parse each schema JSON string and combine into an array
+    parsed = []
+    for s in valid_schemas:
+        try:
+            parsed.append(json.loads(s))
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    if not parsed:
+        return ""
+
+    return json.dumps(parsed, ensure_ascii=False)
 
 
 def strip_schema_from_html(html):

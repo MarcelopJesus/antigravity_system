@@ -7,6 +7,7 @@ from core.seo.schema import (
     generate_faq_schema,
     extract_faq_from_html,
     inject_schema_into_html,
+    prepare_schema_meta,
 )
 
 
@@ -102,16 +103,63 @@ class TestExtractFaqFromHtml(unittest.TestCase):
 
 class TestInjectSchema(unittest.TestCase):
 
-    def test_inject_is_noop(self):
-        """inject_schema_into_html is now a no-op (WP strips script tags from content)."""
+    def test_inject_adds_script_tags(self):
+        """inject_schema_into_html now injects for dry-run/local output."""
         html = "<h1>Title</h1><p>Content</p>"
         schema = '{"@type": "Article"}'
         result = inject_schema_into_html(html, [schema])
-        assert result == html
+        assert '<script type="application/ld+json">' in result
+        assert '"@type": "Article"' in result
+
+    def test_inject_before_body_close(self):
+        html = "<body><h1>Title</h1></body>"
+        schema = '{"@type": "Article"}'
+        result = inject_schema_into_html(html, [schema])
+        assert result.index('application/ld+json') < result.index('</body>')
+
+    def test_inject_appends_when_no_body(self):
+        html = "<h1>Title</h1>"
+        schema = '{"@type": "Article"}'
+        result = inject_schema_into_html(html, [schema])
+        assert result.endswith('</script>')
 
     def test_no_schemas(self):
         html = "<h1>Title</h1>"
         assert inject_schema_into_html(html, []) == html
+
+    def test_empty_schema_strings_ignored(self):
+        html = "<h1>Title</h1>"
+        assert inject_schema_into_html(html, [""]) == html
+
+
+class TestPrepareSchemaMetaForWordPress(unittest.TestCase):
+
+    def test_creates_json_array(self):
+        schemas = [
+            json.dumps({"@type": "Article", "headline": "Test"}),
+            json.dumps({"@type": "FAQPage"}),
+        ]
+        result = prepare_schema_meta(schemas)
+        parsed = json.loads(result)
+        assert isinstance(parsed, list)
+        assert len(parsed) == 2
+        assert parsed[0]["@type"] == "Article"
+
+    def test_empty_schemas(self):
+        assert prepare_schema_meta([]) == ""
+        assert prepare_schema_meta(None) == ""
+
+    def test_skips_invalid_json(self):
+        schemas = ['{"@type": "Article"}', 'not-json', '{"@type": "FAQ"}']
+        result = prepare_schema_meta(schemas)
+        parsed = json.loads(result)
+        assert len(parsed) == 2
+
+    def test_empty_strings_filtered(self):
+        schemas = ["", '{"@type": "Article"}', ""]
+        result = prepare_schema_meta(schemas)
+        parsed = json.loads(result)
+        assert len(parsed) == 1
 
 
 if __name__ == "__main__":
