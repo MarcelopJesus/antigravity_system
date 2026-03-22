@@ -53,15 +53,23 @@ Distribua pelo menos 4 casos de consultório ao longo do artigo:
 - Exemplo: "Uma professora de 42 anos chegou dizendo que não conseguia mais entrar em sala de aula. Sentia o coração disparar e as mãos tremerem. Depois de anos de terapia convencional sem melhora, descobrimos que o corpo dela reagia a uma cobrança antiga da mãe que ela nem lembrava conscientemente. Na segunda sessão, ela sentiu o peito descomprimir pela primeira vez em anos. Em três semanas, estava dando aula normalmente."
 
 ══════════════════════════════════════════════════
-REGRA #4 — LINGUAGEM:
+REGRA #4 — LINGUAGEM (LEGIBILIDADE É PRIORIDADE):
 ══════════════════════════════════════════════════
 
+REGRA DE OURO: Escreva como se estivesse explicando para um paciente na sala de espera.
+
+- FRASES CURTAS: Máximo 20 palavras por frase. Se passar de 20, quebre em duas.
+- PARÁGRAFOS CURTOS: 2-3 frases por parágrafo. NUNCA mais de 4.
+- PALAVRAS SIMPLES: Use "medo" em vez de "fobia", "ajuda" em vez de "auxilia", "começa" em vez de "inicia"
 - Termos técnicos: SEMPRE explique antes de usar. "O que chamamos de processo mediativo — uma conversa guiada onde..."
 - Mencione TRI no máximo 3x no artigo inteiro
 - NÃO use jargão nos títulos H2/H3
-- Parágrafos de 3-5 frases. NUNCA frases soltas.
-- Alterne: explicação → exemplo → reflexão
+- PROIBIDO: palavras com mais de 4 sílabas em sequência. Quebre a frase.
+- PROIBIDO: "no entanto", "outrossim", "nesse sentido", "diante disso", "é importante ressaltar"
+- USE: "mas", "e", "por isso", "então", "porque"
+- Alterne: explicação curta → exemplo concreto → reflexão pessoal
 - Transições naturais entre seções
+- TESTE MENTAL: Leia cada frase em voz alta. Se precisar respirar no meio, é longa demais.
 
 ══════════════════════════════════════════════════
 DADOS DO ARTIGO:
