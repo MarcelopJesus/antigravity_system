@@ -22,46 +22,69 @@ class GrowthAgent(BaseAgent):
         return GROWTH_HACKER_PROMPT.format(title=title)
 
     def _parse_response(self, raw_text, input_data=None):
-        """Parse cluster map or simple suggestions from response."""
+        """Parse cluster-aware suggestions from response."""
         lines = [line.strip() for line in raw_text.split('\n') if line.strip()]
 
-        # Check if response has PILLAR/CLUSTER format
-        has_cluster_format = any(
-            line.upper().startswith(("PILLAR:", "CLUSTER:"))
+        # New format: CLUSTER: name + KEYWORD: keyword
+        has_new_format = any(
+            line.upper().startswith(("KEYWORD:", "CLUSTER:"))
             for line in lines
         )
 
-        if has_cluster_format:
+        if has_new_format:
+            return _parse_cluster_keywords(lines)
+
+        # Legacy format: PILLAR/CLUSTER
+        has_legacy = any(
+            line.upper().startswith("PILLAR:")
+            for line in lines
+        )
+        if has_legacy:
             return _parse_cluster_map(lines)
 
-        # Fallback: simple suggestions (backward compatible)
+        # Fallback: plain text suggestions
         suggestions = [
             line.replace("-", "").strip()
             for line in lines
-            if line.strip()
+            if line.strip() and len(line.strip()) > 3
         ]
-        return suggestions[:2]
+        return suggestions[:6]
+
+
+def _parse_cluster_keywords(lines):
+    """Parse CLUSTER/KEYWORD format into list of keyword strings.
+
+    Returns:
+        List of keyword strings (plain, ready for sheets).
+    """
+    cluster_name = ""
+    keywords = []
+
+    for line in lines:
+        upper = line.upper()
+        if upper.startswith("CLUSTER:"):
+            cluster_name = line[8:].strip()
+        elif upper.startswith("KEYWORD:"):
+            kw = line[8:].strip()
+            if kw and len(kw.split()) <= 6:
+                keywords.append(kw)
+
+    logger.info("Growth suggestions: %d keywords (cluster: %s)",
+                len(keywords), cluster_name or "unknown")
+    return keywords
 
 
 def _parse_cluster_map(lines):
-    """Parse PILLAR/CLUSTER format into structured list.
-
-    Returns:
-        List of dicts: [{"keyword": str, "type": "pillar"|"cluster"}]
-    """
-    result = []
+    """Parse legacy PILLAR/CLUSTER format. Returns list of keyword strings."""
+    keywords = []
     for line in lines:
         upper = line.upper()
         if upper.startswith("PILLAR:"):
             kw = line[7:].strip()
             if kw:
-                result.append({"keyword": kw, "type": "pillar"})
+                keywords.append(kw)
         elif upper.startswith("CLUSTER:"):
             kw = line[8:].strip()
             if kw:
-                result.append({"keyword": kw, "type": "cluster"})
-
-    logger.info("Cluster map parsed: %d pillar(s), %d cluster(s)",
-                sum(1 for r in result if r["type"] == "pillar"),
-                sum(1 for r in result if r["type"] == "cluster"))
-    return result
+                keywords.append(kw)
+    return keywords

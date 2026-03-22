@@ -113,8 +113,7 @@ class TestParseClusterMap:
         ]
         result = _parse_cluster_map(lines)
         assert len(result) == 4
-        assert result[0]["type"] == "pillar"
-        assert result[1]["type"] == "cluster"
+        assert "ansiedade tratamento completo" in result
 
     def test_empty_lines_skipped(self):
         lines = ["PILLAR: test", "", "CLUSTER: sub"]

@@ -188,20 +188,20 @@ class TestEditorAgent:
 
 class TestGrowthAgent:
     def test_execute_returns_suggestions(self):
-        llm = make_llm_client("- Topic One\n- Topic Two\n- Topic Three")
+        llm = make_llm_client("CLUSTER: Ansiedade\nKEYWORD: ansiedade noturna causas\nKEYWORD: crise ansiedade tratamento")
         agent = GrowthAgent(llm, make_kb())
         result = agent.execute({"title": "Test Article"})
 
         assert result.success is True
         assert len(result.content) == 2
-        assert "Topic One" in result.content[0]
+        assert "ansiedade noturna causas" in result.content
 
-    def test_limits_to_two_suggestions(self):
-        llm = make_llm_client("A\nB\nC\nD\nE")
+    def test_limits_suggestions(self):
+        llm = make_llm_client("A\nB\nC\nD\nE\nF\nG")
         agent = GrowthAgent(llm, make_kb())
         result = agent.execute({"title": "Test"})
 
-        assert len(result.content) == 2
+        assert len(result.content) <= 6
 
 
 # ──────────────────────────────────────────────

@@ -1,26 +1,32 @@
 Você é um especialista em estratégia de conteúdo e SEO para um blog profissional de {{ persona.expertise }}.
 
-Com base neste artigo '{{ title }}', gere um MAPA DE CLUSTER temático:
+O blog trabalha com 4 CLUSTERS TEMÁTICOS. Todo artigo DEVE pertencer a um destes clusters:
+1. HIPNOTERAPIA (o serviço: como funciona, condições tratadas, prático/comercial)
+2. ANSIEDADE (tipos, sintomas, tratamentos, situações específicas)
+3. TRI (conceitos da Terapia de Reintegração Implícita, diferencial do profissional)
+4. DEPRESSÃO (tipos, sintomas, tratamentos)
 
-1. Identifique o TEMA CENTRAL (pillar topic) deste artigo
-2. Sugira 6-8 keywords de cluster relacionadas ao tema
-3. As keywords devem cobrir diferentes ângulos (sintomas, causas, tratamento, prevenção, etc.)
+Com base neste artigo '{{ title }}':
 
-REGRAS CRÍTICAS PARA KEYWORDS:
-- MÁXIMO 5 palavras por keyword (ex: "hipnoterapia para ansiedade")
-- Keywords devem ser termos que PESSOAS REAIS digitam no Google
-- NÃO use frases longas como títulos de artigo
-- NÃO inclua nomes de pessoas nas keywords
-- Bons exemplos: "hipnoterapia ansiedade funciona", "crise de ansiedade tratamento", "TRI terapia o que é"
-- Ruins exemplos: "Como a Terapia de Reintegração Implícita acessa a causa oculta da ansiedade"
+1. Identifique a qual CLUSTER este artigo pertence
+2. Sugira 6 keywords DO MESMO CLUSTER que complementam este artigo
+3. As keywords devem ser termos que pessoas pesquisam no Google
 
-FORMATO DE SAÍDA (uma keyword por linha, prefixo indica o tipo):
-PILLAR: [keyword broad, 2-3 palavras]
-CLUSTER: [keyword long-tail, 3-5 palavras]
-CLUSTER: [keyword long-tail, 3-5 palavras]
-CLUSTER: [keyword long-tail, 3-5 palavras]
-CLUSTER: [keyword long-tail, 3-5 palavras]
-CLUSTER: [keyword long-tail, 3-5 palavras]
-CLUSTER: [keyword long-tail, 3-5 palavras]
+REGRAS CRÍTICAS:
+- MÁXIMO 5 palavras por keyword
+- Keywords devem ser do MESMO cluster do artigo
+- NÃO sugira keywords que já existem no blog
+- NÃO use frases longas, nomes de pessoas ou jargão
+- Bons: "hipnoterapia para insônia", "ansiedade noturna causas", "TRI trauma tratamento"
+- Ruins: "Como a Terapia de Reintegração Implícita acessa a causa oculta"
 
-Sem explicações, sem aspas. Apenas as keywords com o prefixo PILLAR ou CLUSTER.
+FORMATO (uma por linha):
+CLUSTER: [nome do cluster]
+KEYWORD: [keyword 3-5 palavras]
+KEYWORD: [keyword 3-5 palavras]
+KEYWORD: [keyword 3-5 palavras]
+KEYWORD: [keyword 3-5 palavras]
+KEYWORD: [keyword 3-5 palavras]
+KEYWORD: [keyword 3-5 palavras]
+
+Sem explicações, sem aspas.

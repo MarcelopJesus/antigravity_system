@@ -57,6 +57,90 @@ schedule:
   - '21:00'
   timezone: America/Sao_Paulo
   max_articles_per_run: 1
+topic_clusters:
+  - name: Hipnoterapia
+    pillar_keyword: hipnoterapia guia completo
+    cluster_keywords:
+      - hipnoterapia funciona mesmo
+      - hipnoterapia é segura
+      - hipnose vs hipnoterapia diferença
+      - hipnoterapia ericksoniana o que é
+      - hipnoterapia online funciona
+      - hipnoterapia valor sessão preço
+      - primeira sessão hipnoterapia
+      - hipnoterapia quem pode fazer
+      - hipnoterapia para insônia
+      - hipnoterapia para emagrecer
+      - hipnoterapia parar de fumar
+      - hipnoterapia para fobia
+      - hipnoterapia para TDAH
+      - hipnoterapia para autoestima
+      - hipnoterapia para trauma
+      - hipnoterapia infantil criança
+      - hipnoterapia para fobia social
+      - hipnoterapia dor crônica costas
+      - hipnoterapia para síndrome pânico
+      - hipnoterapia para luto
+      - hipnoterapia para estresse trabalho
+      - hipnoterapia para procrastinação
+      - hipnoterapia vs psicologia
+      - hipnoterapia vs psiquiatria
+      - hipnoterapia vs meditação
+      - quantas sessões hipnoterapia precisa
+      - hipnoterapia resultados quanto tempo
+  - name: Ansiedade
+    pillar_keyword: ansiedade guia completo
+    cluster_keywords:
+      - ansiedade generalizada
+      - ansiedade social tratamento
+      - ansiedade noturna causas
+      - ansiedade sintomas físicos corpo
+      - crise de ansiedade tratamento
+      - ansiedade e insônia
+      - ansiedade e falta de ar
+      - ansiedade e dor no peito
+      - ansiedade tem cura
+      - como controlar ansiedade
+      - tratamento ansiedade sem remédio
+      - ansiedade no trabalho
+      - ansiedade e perfeccionismo
+      - ansiedade e procrastinação
+      - ansiedade na gravidez
+      - ansiedade em adolescentes
+      - síndrome pânico tratamento
+      - medo irracional como superar
+  - name: TRI
+    pillar_keyword: TRI terapia reintegração implícita
+    cluster_keywords:
+      - terapia tri o que é
+      - conflito visceral
+      - processo mediativo
+      - dor e sofrimento
+      - memória implícita terapia
+      - TRI ansiedade como funciona
+      - TRI vs terapia convencional
+      - TRI trauma emocional tratamento
+      - TRI sintomas psicossomáticos
+      - TRI bloqueio emocional tratamento
+      - TRI base científica
+      - TRI neurociência cérebro
+      - reconsolação memória TRI
+  - name: Depressão
+    pillar_keyword: depressão guia completo tratamento
+    cluster_keywords:
+      - depressão profunda sintomas
+      - depressão leve sinais
+      - depressão pós parto
+      - depressão sintomas físicos
+      - depressão tem cura
+      - depressão tratamento sem remédio
+      - hipnoterapia para depressão
+      - TRI para depressão
+      - como ajudar pessoa depressão
+      - depressão e cansaço
+      - depressão e insônia
+      - burnout tratamento terapia
+      - distimia o que é
 seo:
   min_score: 40
   max_internal_links: 5
