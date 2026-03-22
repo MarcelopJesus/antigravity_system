@@ -13,11 +13,14 @@ class SheetsClient:
         self.gc = gspread.service_account(filename=credentials_path)
         logger.info("Google Sheets client initialized.")
 
+    # Statuses that mean "already done" — everything else is pending
+    DONE_STATUSES = {'done', 'error'}
+
     def get_pending_rows(self, spreadsheet_id):
         """
-        Reads the spreadsheet and finds rows where 'Status' (Col B) is empty
-        or has PRIORIDADE flag (priority keywords for internal linking).
-        Priority keywords are sorted first so they get processed before regular ones.
+        Reads the spreadsheet and finds rows where Status is NOT 'Done'.
+        Recognizes: empty, 'Pending', 'pendente', '💡 Sugestão IA' as pending.
+        PRIORIDADE keywords are sorted first.
         Returns a list of dicts: {'row_num': int, 'keyword': str}
         """
         sh = self.gc.open_by_key(spreadsheet_id)
@@ -31,18 +34,25 @@ class SheetsClient:
             keyword = row[0] if len(row) > 0 else ""
             status = row[1] if len(row) > 1 else ""
 
-            if not keyword:
+            if not keyword.strip():
                 continue
 
-            if "PRIORIDADE" in status:
+            status_lower = status.strip().lower()
+
+            # Skip done/error rows
+            if status_lower in self.DONE_STATUSES:
+                continue
+
+            if "PRIORIDADE" in status.upper():
                 priority.append({
                     'row_num': i,
-                    'keyword': keyword
+                    'keyword': keyword.strip()
                 })
-            elif not status.strip():
+            else:
+                # Everything else is pending (empty, Pending, pendente, Sugestão IA, etc.)
                 regular.append({
                     'row_num': i,
-                    'keyword': keyword
+                    'keyword': keyword.strip()
                 })
 
         # Priority keywords first, then regular pending
