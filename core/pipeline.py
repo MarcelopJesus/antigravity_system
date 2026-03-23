@@ -117,12 +117,12 @@ def clean_orphan_placeholders(html):
 
 
 def fix_image_placement(html):
-    """Ensure exactly 2 IMG_PLACEHOLDERs are correctly positioned in the HTML.
+    """Ensure exactly 2 IMG_PLACEHOLDERs are well distributed in the HTML.
 
     Rules:
-    - Placeholder 1: After the introduction, before the first H2
-    - Placeholder 2: Before the CTA box (or before the last H2 if no CTA)
-    - Never adjacent (must have at least 1 H2 section between them)
+    - Placeholder 1: After the 2nd H2 (1/3 into the article)
+    - Placeholder 2: Before the CTA box or before the last H2 (2/3 into the article)
+    - Minimum 2 H2 sections between them
 
     Returns the fixed HTML.
     """
@@ -130,34 +130,35 @@ def fix_image_placement(html):
 
     # Remove all existing placeholders
     html = html.replace(placeholder, "")
-    # Clean up any empty lines left behind
     html = re.sub(r'\n{3,}', '\n\n', html)
 
     # Find insertion points
     h2_positions = [m.start() for m in re.finditer(r'<h2[\s>]', html, re.IGNORECASE)]
     cta_pos = html.find('<div class="cta-box">')
 
-    if not h2_positions:
+    if len(h2_positions) < 2:
         return html
 
-    # Placeholder 1: Before the first H2
-    pos1 = h2_positions[0]
+    # Placeholder 1: Before the 3rd H2 (after 2 sections of content)
+    if len(h2_positions) >= 3:
+        pos1 = h2_positions[2]
+    else:
+        pos1 = h2_positions[1]
 
-    # Placeholder 2: Before the CTA, or before the last H2 if no CTA
+    # Placeholder 2: Before the CTA, or before the last H2
     if cta_pos > 0:
         pos2 = cta_pos
-    elif len(h2_positions) >= 3:
+    elif len(h2_positions) >= 4:
         pos2 = h2_positions[-1]
     else:
         pos2 = len(html)
 
-    # Ensure pos2 is after pos1 and they are separated
+    # Ensure minimum separation
     if pos2 <= pos1:
         pos2 = len(html)
 
     # Insert placeholder 2 first (higher position) to not shift pos1
     html = html[:pos2] + "\n" + placeholder + "\n\n" + html[pos2:]
-    # Insert placeholder 1
     html = html[:pos1] + placeholder + "\n\n" + html[pos1:]
 
     return html
