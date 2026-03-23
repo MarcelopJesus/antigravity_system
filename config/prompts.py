@@ -263,45 +263,52 @@ Retorne APENAS o HTML final limpo. Nada mais.
 # 5. DIRETOR DE ARTE (Fotografia Editorial Premium)
 # ═══════════════════════════════════════════════════════════════════
 IMAGE_PROMPT_GENERATION = """
-Você é um Diretor de Arte especializado em fotografia editorial para blogs de saúde mental.
-Crie 2 prompts de imagem fotorrealistas e cinematográficas para ilustrar este artigo.
+You are a photojournalist creating editorial images for a therapy clinic blog in São Paulo, Brazil.
 
-DIRETRIZES TÉCNICAS:
+Create 3 image prompts that are SPECIFIC to this article's content. NOT generic "person reflecting" images.
 
-ESTILO: Fotografia editorial documental, estilo revista premium. Realismo absoluto.
-Câmera: Sony A7IV, lente 85mm f/1.4, profundidade de campo rasa.
-LUZ: Natural, golden hour, janelas grandes, tons quentes (3200-4500K).
-CORES: Terrosos (âmbar, caramelo, bege), acentos verde musgo ou azul petróleo.
-COMPOSIÇÃO: Regra dos terços, espaço negativo, 16:9 widescreen.
-ATMOSFERA: Intimista, contemplativa, acolhedora.
+TECHNICAL STYLE:
+- Documentary editorial photography, like a feature in The New York Times Magazine
+- Camera: Sony A7IV, 35mm or 85mm lens, f/2.0, shallow depth of field
+- Light: Warm natural light, large windows, morning sun, São Paulo tropical light
+- Colors: Warm earth tones (amber, terracotta, warm wood), green plants, natural textures
+- Setting: Modern Brazilian therapy office — warm wood furniture, plants, natural light, NOT a cold clinical space
+- People: Brazilian, diverse, real-looking (NOT stock photo models), candid moments
+- Composition: Rule of thirds, 16:9 widescreen, cinematic
 
-NUNCA INCLUA:
-- Pessoas com mãos na cabeça sofrendo (clichê)
-- Cérebros 3D, neurônios coloridos
-- Sorrisos forçados
-- Consultórios brancos estéreis
-- Ilustrações, vetores, ícones
-- Texto ou logos na imagem
+NEVER INCLUDE:
+- Hands on head in distress (cliché stock photo)
+- 3D brains, neurons, abstract medical imagery
+- Forced smiles, thumbs up, celebrating
+- White sterile clinical rooms
+- Illustrations, vectors, icons, text overlays
+- Meditation poses, yoga, candles (too generic)
 
-PROMPT 1 — CAPA (Featured Image):
-Imagem de destaque. Metáfora visual ligada ao tema. Tom evocativo e cinematográfico.
+WHAT MAKES A GOOD IMAGE FOR THIS BLOG:
+- A real moment: therapist and client in conversation, leaning forward, engaged
+- Specific detail: hands holding a warm cup, a journal on a wooden desk, sunlight on a leather chair
+- São Paulo context: view from a Moema office window, tropical plants in a warm room
+- Emotion without cliché: a person looking out a window with subtle relief, NOT crying or celebrating
 
-PROMPT 2 — CORPO (Após introdução):
-Imagem contextual ligada ao conteúdo do artigo. Pessoa em momento de reflexão,
-conexão emocional ou cenário terapêutico acolhedor. Deve complementar o texto ao redor.
+READ THE ARTICLE BELOW AND CREATE IMAGES THAT MATCH THE SPECIFIC TOPIC:
 
-PROMPT 3 — FINAL (Antes da CTA):
-Imagem de encerramento. Mais abstrata, transmitindo leveza e esperança.
-
-ARTIGO:
 {article_content}
 
-SAÍDA (separada por |||):
-Escreva os prompts em INGLÊS, 80-150 palavras cada, ultra-descritivos.
+PROMPT 1 — COVER (Hero image):
+Must visually represent the SPECIFIC topic of this article. Not just "therapy" — what is THIS article about?
+
+PROMPT 2 — BODY (Mid-article):
+A specific scene from the article content. If the article mentions a case study, visualize that moment.
+
+PROMPT 3 — CLOSING (Before CTA):
+Subtle image of hope/resolution related to the article's conclusion. Warm, inviting.
+
+OUTPUT (separated by |||):
+Write prompts in ENGLISH, 80-120 words each, ultra-descriptive and SPECIFIC to this article.
 
 Prompt 1 ||| Prompt 2 ||| Prompt 3
 
-Apenas os 3 prompts separados por |||. Sem numeração, títulos ou explicações.
+Only the 3 prompts separated by |||. No numbering, titles or explanations.
 """
 
 
