@@ -316,7 +316,27 @@ def main(dry_run=False, keywords_file=None):
                 if growth:
                     logger.info("  6. Growth Hacker Agent: Suggesting new topics...")
                     try:
-                        growth_result = growth.execute({"title": final_title})
+                        # Collect all existing keywords to avoid duplicates
+                        existing_kws = set()
+                        existing_kws.add(keyword.lower())
+                        for inv_item in inventory:
+                            kw = inv_item.get('keyword', '')
+                            if kw:
+                                existing_kws.add(kw.lower())
+                        existing_kws.update(seen_keywords)
+                        # Also read ALL keywords from sheet (pending + done)
+                        try:
+                            all_sheet_rows = sheets.gc.open_by_key(tc.spreadsheet_id).sheet1.get_all_values()
+                            for row in all_sheet_rows[1:]:
+                                if row and row[0].strip():
+                                    existing_kws.add(row[0].strip().lower())
+                        except Exception:
+                            pass
+
+                        growth_result = growth.execute({
+                            "title": final_title,
+                            "existing_keywords": "\n".join(sorted(existing_kws)),
+                        })
                         if growth_result.success:
                             for topic in growth_result.content:
                                 # Handle both dict format (cluster map) and plain string

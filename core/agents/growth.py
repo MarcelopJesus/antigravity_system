@@ -10,11 +10,13 @@ class GrowthAgent(BaseAgent):
 
     def _build_prompt(self, input_data):
         title = input_data["title"]
+        existing = input_data.get("existing_keywords", "")
 
         # Use PromptEngine if available
         if self.prompt_engine:
             return self.prompt_engine.render("growth", {
                 "title": title,
+                "existing_keywords": existing if existing else "(nenhuma ainda)",
             })
 
         # Fallback to hardcoded prompts
@@ -55,7 +57,7 @@ def _parse_cluster_keywords(lines):
     """Parse CLUSTER/KEYWORD format into list of keyword strings.
 
     Returns:
-        List of keyword strings (plain, ready for sheets).
+        List of max 3 keyword strings (plain, ready for sheets).
     """
     cluster_name = ""
     keywords = []
@@ -68,6 +70,9 @@ def _parse_cluster_keywords(lines):
             kw = line[8:].strip()
             if kw and len(kw.split()) <= 6:
                 keywords.append(kw)
+
+    # Hard limit: max 3 suggestions per article
+    keywords = keywords[:3]
 
     logger.info("Growth suggestions: %d keywords (cluster: %s)",
                 len(keywords), cluster_name or "unknown")
