@@ -52,4 +52,12 @@ class WriterAgent(BaseAgent):
         )
 
     def _parse_response(self, raw_text, input_data=None):
-        return raw_text
+        clean = self.clean_llm_output(raw_text)
+
+        # Strip markdown code blocks if model wrapped HTML in them
+        if clean.strip().startswith("```"):
+            import re
+            clean = re.sub(r'^```(?:html)?\s*', '', clean.strip())
+            clean = re.sub(r'\s*```\s*$', '', clean)
+
+        return clean.strip()
