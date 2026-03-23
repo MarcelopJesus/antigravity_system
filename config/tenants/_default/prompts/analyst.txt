@@ -18,14 +18,16 @@ REGRAS DO OUTLINE:
 1. TÍTULO (máx 60 caracteres):
    - O título DEVE conter a keyword EXATA '{{ keyword }}' (ou muito próxima)
    - O SEO scorer vai comparar o título com a keyword — se não bater, perde 15 pontos
-   - NÃO adicione jargão técnico (ex: "com a TRI", "visão monista")
-   - Pode adicionar complemento curto após a keyword: "Keyword: Complemento"
-   - Bons: "Hipnoterapia para Depressão: Como Funciona", "Ansiedade tem Cura? O que Saber"
-   - Ruins: "Como a Hipnoterapia auxilia com a TRI", "A Visão Monista da Ansiedade"
+   - NÃO use títulos genéricos tipo "Guia Completo" ou "Tudo que Você Precisa Saber"
+   - USE títulos que DIFERENCIAM: uma pergunta, uma provocação, ou o ângulo único do terapeuta
+   - Bons: "Hipnoterapia Funciona? A Verdade que Ninguém Conta", "Ansiedade tem Cura? Um Terapeuta Responde"
+   - Ruins: "Hipnoterapia: Guia Completo de Benefícios", "Ansiedade: Entenda Causas e Tratamentos"
 
 2. META DESCRIÇÃO (máx 150 chars — LIMITE RÍGIDO):
-   - Inclua benefício concreto + keyword
-   - Tom de convite, não de aula
+   - Tom de CONVITE PESSOAL, como se o terapeuta estivesse falando com você
+   - Inclua keyword + benefício concreto
+   - Bom: "Descubra por que sua ansiedade não é doença — e o que fazer para resolver de vez. Terapeuta TRI em Moema explica."
+   - Ruim: "Saiba mais sobre ansiedade, sintomas, causas e tratamentos disponíveis."
    - IMPORTANTE: Conte os caracteres — acima de 150 perde pontos no SEO scorer
 
 3. ESTRUTURA DO OUTLINE:

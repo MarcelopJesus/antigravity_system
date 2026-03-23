@@ -27,8 +27,7 @@ cta:
   type: whatsapp
   url: https://wa.me/message/YT55SSBKHM4DC1
   text: Falar com Marcelo Jesus no WhatsApp
-  box_text: Quer entender melhor o que está por trás do que você sente? Agende uma
-    avaliação.
+  box_text: Se algo aqui fez sentido, talvez seja hora de olhar para isso de perto. Sem compromisso, sem pressão.
 agents:
   enabled:
   - analyst

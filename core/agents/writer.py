@@ -7,7 +7,7 @@ class WriterAgent(BaseAgent):
     name = "writer"
 
     def _get_kb_filter(self):
-        return ["tri_essencia", "premium"]
+        return ["tri_essencia", "premium", "voz"]
 
     def _build_prompt(self, input_data):
         if isinstance(input_data, dict) and '_site_config' in input_data:
